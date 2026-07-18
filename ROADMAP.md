@@ -5,8 +5,8 @@
 - [x] Phase 0: Project Setup
 - [x] Phase 1: Configuration & Source Registry
 - [x] Phase 2: Database Layer & Repository Pattern
-- [/] Phase 3: Pydantic Entity Schemas
-- [ ] Phase 4: Async Crawler Orchestrator
+- [x] Phase 3: Async Crawler Engine
+- [/] Phase 4: Pydantic Entity Schemas
 - [ ] Phase 5: Content Normalizer
 - [ ] Phase 6: Strategy Selector
 - [ ] Phase 7: Multi-LLM Client & Pipeline Processor

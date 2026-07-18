@@ -14,10 +14,10 @@
   - `[x]` Implement `src/database/mongodb.py` (client check & connection)
   - `[x]` Implement `src/database/models.py` (document formats)
   - `[x]` Implement `src/database/repositories.py` (Repository Pattern)
-- `[/]` Phase 3: Pydantic Entity Schemas
+- `[x]` Phase 3: Async Crawler Engine
+  - `[x]` Implement `src/crawler/orchestrator.py` with concurrency, retries, and dynamic Playwright fallback
+- `[/]` Phase 4: Pydantic Entity Schemas
   - `[ ]` Implement `src/pipeline/schemas.py` for Startup, Product, Paper, Job, News
-- `[ ]` Phase 4: Async Crawler Orchestrator
-  - `[ ]` Implement `src/crawler/orchestrator.py` with concurrency, retries, and dynamic Playwright fallback
 - `[ ]` Phase 5: Content Normalizer
   - `[ ]` Implement `src/crawler/normalizer.py` (strip headers, footers, scripts, and format text)
 - `[ ]` Phase 6: Strategy Selector
