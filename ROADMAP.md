@@ -7,8 +7,8 @@
 - [x] Phase 2: Database Layer & Repository Pattern
 - [x] Phase 3: Async Crawler Engine
 - [x] Phase 4: Data Modeling & Validation
-- [/] Phase 5: Content Normalizer
-- [ ] Phase 6: Strategy Selector
+- [x] Phase 5: Content Normalizer
+- [/] Phase 6: Strategy Selector
 - [ ] Phase 7: Multi-LLM Client & Pipeline Processor
 - [ ] Phase 8: Schema Validator
 - [ ] Phase 9: Fuzzy Entity Resolution

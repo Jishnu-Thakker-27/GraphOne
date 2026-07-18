@@ -18,9 +18,9 @@
   - `[x]` Implement `src/crawler/orchestrator.py` with concurrency, retries, and dynamic Playwright fallback
 - `[x]` Phase 4: Pydantic Entity Schemas
   - `[x]` Implement `src/pipeline/schemas.py` for Startup, Product, Paper, Job, News
-- `[/]` Phase 5: Content Normalizer
-  - `[ ]` Implement `src/crawler/normalizer.py` (strip headers, footers, scripts, and format text)
-- `[ ]` Phase 6: Strategy Selector
+- `[x]` Phase 5: Content Normalizer
+  - `[x]` Implement `src/crawler/normalizer.py` (strip headers, footers, scripts, and format text)
+- `[/]` Phase 6: Strategy Selector
   - `[ ]` Implement `src/pipeline/selector.py` (routes parsing depending on data format)
 - `[ ]` Phase 7: Multi-LLM Client & Pipeline Processor
   - `[ ]` Implement `src/llm/client.py` with multi-tier fallback (Gemini -> Groq -> DeepSeek) and caching

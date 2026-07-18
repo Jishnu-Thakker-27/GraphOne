@@ -265,11 +265,12 @@ cd AIIP
 
 ---
 
-## 2. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
+## 2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   pip install playwright
+   playwright install chromium
+   ```
 
 ---
 

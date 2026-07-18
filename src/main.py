@@ -4,6 +4,7 @@ import asyncio
 from src.config.config import settings
 from src.config.registry import SourceRegistry
 from src.crawler.orchestrator import AsyncCrawler
+from src.crawler.normalizer import ContentNormalizer
 from src.pipeline.schemas import (
     StartupEntity,
     SourceInfo,
@@ -98,7 +99,7 @@ async def run_pipeline_tests() -> None:
 
     test_sources = [api_source, web_source]
 
-    print("Fetching:")
+    print("Fetching & Normalizing:")
     print("====================================")
     
     start_total_time = time.time()
@@ -118,9 +119,21 @@ async def run_pipeline_tests() -> None:
             
             print(f"[{method}] {source_name}")
             if status == 200 and not content.startswith("ERROR:"):
-                size_kb = len(content.encode('utf-8')) / 1024
+                # Clean content
+                content_type = "XML" if source_name == "arxiv" else "HTML"
+                normalized_content = ContentNormalizer.normalize(content, content_type)
+                
+                raw_size_kb = len(content.encode('utf-8')) / 1024
+                norm_size_kb = len(normalized_content.encode('utf-8')) / 1024
+                reduction = (1 - (norm_size_kb / raw_size_kb)) * 100 if raw_size_kb > 0 else 0
+                
                 print("SUCCESS")
-                print(f"Received {size_kb:.0f} KB")
+                print(f"  Raw Payload Size: {raw_size_kb:.1f} KB")
+                print(f"  Normalized Size : {norm_size_kb:.1f} KB (Reduced by {reduction:.1f}%)")
+                
+                # Print sample text
+                sample = "\n".join(normalized_content.splitlines()[:4])
+                print(f"  Sample Cleaned Text:\n  ---\n  {sample}\n  ---")
                 successful += 1
             else:
                 print("FAILED")
