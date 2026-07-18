@@ -4,8 +4,66 @@ import asyncio
 from src.config.config import settings
 from src.config.registry import SourceRegistry
 from src.crawler.orchestrator import AsyncCrawler
+from src.pipeline.schemas import (
+    StartupEntity,
+    SourceInfo,
+    StartupContent,
+    StartupData,
+)
 
-async def run_crawler_test() -> None:
+def run_schema_verification_test() -> None:
+    print("Schema Validation Test:")
+    print("====================================")
+    
+    # Test 1: Valid Startup Entity
+    try:
+        startup = StartupEntity(
+            source=SourceInfo(name="yc_companies", url="https://www.ycombinator.com"),
+            content=StartupContent(
+                entityName="  OpenAI  ",  # standardizes spacing
+                data=StartupData(employeeCount=120)
+            )
+        )
+        print("Test 1: Valid Startup Entity creation - PASSED")
+        print(f"  Normalized Entity Name: '{startup.content.entityName}'")
+        print(f"  Employee Count: {startup.content.data.employeeCount}")
+        print(f"  Record Type: {startup.recordType.value}")
+        print(f"  Scraped At: {startup.collectedAt}")
+    except Exception as e:
+        print(f"Test 1: FAILED - {e}")
+        
+    print("------------------------------------")
+    
+    # Test 2: Invalid Startup Entity (Invalid URL format)
+    try:
+        StartupEntity(
+            source=SourceInfo(name="yc_companies", url="ftp://invalid-url.com"),
+            content=StartupContent(entityName="Invalid Company")
+        )
+        print("Test 2: Invalid URL - FAILED (expected validation error, but passed)")
+    except Exception as e:
+        print("Test 2: Invalid URL - PASSED (gracefully rejected invalid URL)")
+        print(f"  Rejection Details: {str(e)[:150]}...")
+        
+    print("------------------------------------")
+
+    # Test 3: Invalid Startup Entity (Negative Employee Count)
+    try:
+        StartupEntity(
+            source=SourceInfo(name="yc_companies", url="https://www.ycombinator.com"),
+            content=StartupContent(
+                entityName="Negative Team",
+                data=StartupData(employeeCount=-10)
+            )
+        )
+        print("Test 3: Negative Employee Count - FAILED (expected validation error, but passed)")
+    except Exception as e:
+        print("Test 3: Negative Employee Count - PASSED (gracefully rejected negative value)")
+        print(f"  Rejection Details: {str(e)[:150]}...")
+
+    print("====================================")
+
+async def run_pipeline_tests() -> None:
     print("Adaptive Intelligence Ingestion Pipeline (AIIP) Initialized.\n")
 
     # 1. Validate environment configuration
@@ -17,7 +75,11 @@ async def run_crawler_test() -> None:
         print(f"CRITICAL CONFIG ERROR: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # 2. Load registry sources
+    # 2. Run Schema Verification
+    run_schema_verification_test()
+    print()
+
+    # 3. Load registry sources
     try:
         registry = SourceRegistry()
         enabled_sources = registry.load()
@@ -79,7 +141,7 @@ async def run_crawler_test() -> None:
     print(f"Total duration    : {total_duration:.2f}s")
 
 def main() -> None:
-    asyncio.run(run_crawler_test())
+    asyncio.run(run_pipeline_tests())
 
 if __name__ == "__main__":
     main()

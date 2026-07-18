@@ -6,8 +6,8 @@
 - [x] Phase 1: Configuration & Source Registry
 - [x] Phase 2: Database Layer & Repository Pattern
 - [x] Phase 3: Async Crawler Engine
-- [/] Phase 4: Pydantic Entity Schemas
-- [ ] Phase 5: Content Normalizer
+- [x] Phase 4: Data Modeling & Validation
+- [/] Phase 5: Content Normalizer
 - [ ] Phase 6: Strategy Selector
 - [ ] Phase 7: Multi-LLM Client & Pipeline Processor
 - [ ] Phase 8: Schema Validator
