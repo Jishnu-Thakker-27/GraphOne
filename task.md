@@ -22,11 +22,11 @@
   - `[x]` Implement `src/crawler/normalizer.py` (strip headers, footers, scripts, and format text)
 - `[x]` Phase 6: Strategy Selector
   - `[x]` Implement `src/pipeline/selector.py` (routes parsing depending on data format)
-- `[/]` Phase 7: Hybrid Extraction Engine
-  - `[ ]` Implement API response parsing
-  - `[ ]` Implement HTML JSON-LD metadata extraction
-  - `[ ]` Implement rule-based parsing rules
-- `[ ]` Phase 8: Multi-LLM Orchestrator
+- `[x]` Phase 7: Hybrid Extraction Engine
+  - `[x]` Implement API response parsing
+  - `[x]` Implement HTML JSON-LD metadata extraction
+  - `[x]` Implement rule-based parsing rules
+- `[/]` Phase 8: Multi-LLM Orchestrator
   - `[ ]` Implement `src/llm/client.py` with multi-tier fallback (Gemini -> Groq -> DeepSeek) and caching
   - `[ ]` Implement `src/pipeline/processor.py` for LLM prompt orchestration
 - `[ ]` Phase 9: Schema Validator

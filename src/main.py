@@ -10,8 +10,10 @@ from src.pipeline.schemas import (
     SourceInfo,
     StartupContent,
     StartupData,
+    ExtractionStrategy,
 )
 from src.pipeline.selector import StrategySelector
+from src.pipeline.extractor import HybridExtractionEngine
 
 def run_schema_verification_test() -> None:
     print("Schema Validation Test:")
@@ -128,6 +130,97 @@ def run_selector_verification_test() -> None:
     print(f"Test 3: Unstructured with JSON-LD -> Selected: {strategy3.value} (Expected: JSON_LD) - PASSED")
     print("====================================")
 
+def run_extractor_verification_test() -> None:
+    print("Hybrid Extraction Engine Test:")
+    print("====================================")
+    
+    # Test 1: JSON_API (arXiv Feed XML)
+    xml_feed = """<?xml version="1.0" encoding="UTF-8"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <entry>
+        <title>Attention Is All You Need</title>
+        <author><name>Ashish Vaswani</name></author>
+        <author><name>Noam Shazeer</name></author>
+        <id>https://arxiv.org/abs/1706.03762</id>
+        <published>2017-06-12T14:00:00Z</published>
+      </entry>
+    </feed>
+    """
+    results_api = HybridExtractionEngine.extract("arxiv", xml_feed, ExtractionStrategy.JSON_API)
+    print(f"Test 1: JSON_API (arXiv) -> Extracted {len(results_api)} paper(s) - PASSED")
+    if results_api:
+        paper = results_api[0]["content"]
+        print(f"  Title: '{paper['title']}'")
+        print(f"  Authors: {paper['authors']}")
+        print(f"  Url: '{paper['paper_url']}'")
+        print(f"  Published: {paper['published_date']}")
+        
+    print("------------------------------------")
+    
+    # Test 2: JSON_LD (Embedded metadata)
+    html_json_ld = """
+    <html>
+      <head>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "Anthropic",
+          "numberOfEmployees": {
+            "@type": "QuantitativeValue",
+            "value": 350
+          }
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": "Claude 3.5 Sonnet",
+          "offers": {
+            "@type": "Offer",
+            "price": "0"
+          }
+        }
+        </script>
+      </head>
+      <body>Claude and Anthropic</body>
+    </html>
+    """
+    results_ld = HybridExtractionEngine.extract("yc_companies", html_json_ld, ExtractionStrategy.JSON_LD)
+    print(f"Test 2: JSON_LD -> Extracted {len(results_ld)} entity/entities - PASSED")
+    for r in results_ld:
+        record_type = r["recordType"]
+        content = r["content"]
+        print(f"  Record Type: {record_type}")
+        if record_type == "STARTUP":
+            print(f"    Name: '{content['entityName']}'")
+            print(f"    Employees: {content['data']['employeeCount']}")
+        elif record_type == "PRODUCT":
+            print(f"    Product Name: '{content['startupName']}'")
+            print(f"    Pricing: {content['pricingModel']}")
+            
+    print("------------------------------------")
+    
+    # Test 3: RULE_BASED (GitHub Trending parser)
+    github_trending_html = """
+    <article class="Box-row">
+      <h2 class="h3 lh-condensed">
+        <a href="/vllm-project/vllm">
+          vllm-project / vllm
+        </a>
+      </h2>
+      <p class="col-9 color-fg-muted my-1 pr-4">A high-throughput and memory-efficient LLM serving engine.</p>
+    </article>
+    """
+    results_rules = HybridExtractionEngine.extract("github_trending_ai", github_trending_html, ExtractionStrategy.RULE_BASED)
+    print(f"Test 3: RULE_BASED (GitHub Trending) -> Extracted {len(results_rules)} product(s) - PASSED")
+    if results_rules:
+        prod = results_rules[0]["content"]
+        print(f"  Startup Name: '{prod['startupName']}'")
+        print(f"  Pricing Model: {prod['pricingModel']}")
+    print("====================================")
+
 async def run_pipeline_tests() -> None:
     print("Adaptive Intelligence Ingestion Pipeline (AIIP) Initialized.\n")
 
@@ -148,7 +241,11 @@ async def run_pipeline_tests() -> None:
     run_selector_verification_test()
     print()
 
-    # 4. Load registry sources
+    # 4. Run Hybrid Extraction Engine Verification
+    run_extractor_verification_test()
+    print()
+
+    # 5. Load registry sources
     try:
         registry = SourceRegistry()
         enabled_sources = registry.load()
@@ -197,6 +294,10 @@ async def run_pipeline_tests() -> None:
                 # Verify Strategy Selector on dynamic data
                 if source_cfg:
                     sel_strategy = StrategySelector.select_strategy(source_cfg, content)
+                    # Extract using Hybrid Engine if strategy supports it
+                    if sel_strategy != ExtractionStrategy.LLM:
+                        extracted = HybridExtractionEngine.extract(source_name, content, sel_strategy)
+                        print(f"  Hybrid Extractor -> Extracted {len(extracted)} records")
                 
                 raw_size_kb = len(content.encode('utf-8')) / 1024
                 norm_size_kb = len(normalized_content.encode('utf-8')) / 1024

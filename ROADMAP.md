@@ -9,8 +9,8 @@
 - [x] Phase 4: Data Modeling & Validation
 - [x] Phase 5: Content Normalizer
 - [x] Phase 6: Strategy Selector
-- [/] Phase 7: Hybrid Extraction Engine
-- [ ] Phase 8: Multi-LLM Orchestrator
+- [x] Phase 7: Hybrid Extraction Engine
+- [/] Phase 8: Multi-LLM Orchestrator
 - [ ] Phase 9: Schema Validator
 - [ ] Phase 10: Fuzzy Entity Resolution
 - [ ] Phase 11: Knowledge Delta Engine
