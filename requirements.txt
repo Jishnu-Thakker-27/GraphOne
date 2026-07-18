@@ -1,0 +1,33 @@
+# Backend
+fastapi>=0.100.0
+uvicorn>=0.22.0
+
+# Configuration
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+
+# Database
+pymongo>=4.8.0
+
+# Validation
+pydantic>=2.8.0
+
+# Crawling & Parsing
+aiohttp>=3.10.0
+playwright>=1.46.0
+beautifulsoup4>=4.12.3
+selectolax>=0.3.21
+
+# AI
+google-genai>=1.30.0
+
+# Entity Resolution
+rapidfuzz>=3.9.0
+
+# Data Export
+pandas>=2.2.2
+gspread>=6.1.2
+google-auth>=2.35.0
+
+# Logging
+loguru>=0.7.2

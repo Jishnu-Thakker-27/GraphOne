@@ -1,0 +1,41 @@
+# AIIP Development Task List
+
+- `[x]` Phase 0: Project Setup
+  - `[x]` Create folder structure
+  - `[x]` Create `requirements.txt`
+  - `[x]` Create `README.md` and `ROADMAP.md`
+  - `[x]` Create `.env.example` and `.gitignore`
+  - `[x]` Create dummy entrypoint `src/main.py`
+  - `[x]` Create config loading skeletal structures
+- `[x]` Phase 1: Configuration
+  - `[x]` Create `src/config/sources.yaml` with extended registry
+  - `[x]` Implement `src/config/config.py` loader
+- `[/]` Phase 2: Database Connection & Repository Layer
+  - `[ ]` Implement `src/database/mongodb.py` (client check & connection)
+  - `[ ]` Implement `src/database/models.py` (document formats)
+  - `[ ]` Implement `src/database/repositories.py` (Repository Pattern)
+- `[ ]` Phase 3: Pydantic Entity Schemas
+  - `[ ]` Implement `src/pipeline/schemas.py` for Startup, Product, Paper, Job, News
+- `[ ]` Phase 4: Async Crawler Orchestrator
+  - `[ ]` Implement `src/crawler/orchestrator.py` with concurrency, retries, and dynamic Playwright fallback
+- `[ ]` Phase 5: Content Normalizer
+  - `[ ]` Implement `src/crawler/normalizer.py` (strip headers, footers, scripts, and format text)
+- `[ ]` Phase 6: Strategy Selector
+  - `[ ]` Implement `src/pipeline/selector.py` (routes parsing depending on data format)
+- `[ ]` Phase 7: Multi-LLM Client & Pipeline Processor
+  - `[ ]` Implement `src/llm/client.py` with multi-tier fallback (Gemini -> Groq -> DeepSeek) and caching
+  - `[ ]` Implement `src/pipeline/processor.py` for rule-based parsing and LLM orchestration
+- `[ ]` Phase 8: Schema Validator
+  - `[ ]` Implement `src/pipeline/validator.py` using Pydantic schemas
+- `[ ]` Phase 9: Fuzzy Entity Resolution
+  - `[ ]` Implement `src/resolution/resolver.py` (RapidFuzz matching + pre-seeded list of 50 AI startups)
+- `[ ]` Phase 10: Knowledge Delta Engine
+  - `[ ]` Implement `src/delta/engine.py` (diff logic, ChangeHistory logs, and confidence checking)
+- `[ ]` Phase 11: CSV & Google Sheets Exporters
+  - `[ ]` Implement `src/exporters/sheets.py` (write to local outputs directory + gspread Sheets sync)
+- `[ ]` Phase 12: Metrics, API, Logging & Final Integration
+  - `[ ]` Implement `src/metrics/collector.py` (operational run counts)
+  - `[ ]` Implement `src/api/` (health check, metrics, and changes endpoints)
+  - `[ ]` Implement `src/utils/helpers.py` (Loguru JSON/human logging configuration)
+  - `[ ]` Create Architecture Decision Records (ADRs) under `docs/ADR/`
+  - `[ ]` Assemble pipeline orchestrator in `src/main.py`
