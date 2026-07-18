@@ -10,11 +10,11 @@
 - `[x]` Phase 1: Configuration
   - `[x]` Create `src/config/sources.yaml` with extended registry
   - `[x]` Implement `src/config/config.py` loader
-- `[/]` Phase 2: Database Connection & Repository Layer
-  - `[ ]` Implement `src/database/mongodb.py` (client check & connection)
-  - `[ ]` Implement `src/database/models.py` (document formats)
-  - `[ ]` Implement `src/database/repositories.py` (Repository Pattern)
-- `[ ]` Phase 3: Pydantic Entity Schemas
+- `[x]` Phase 2: Database Connection & Repository Layer
+  - `[x]` Implement `src/database/mongodb.py` (client check & connection)
+  - `[x]` Implement `src/database/models.py` (document formats)
+  - `[x]` Implement `src/database/repositories.py` (Repository Pattern)
+- `[/]` Phase 3: Pydantic Entity Schemas
   - `[ ]` Implement `src/pipeline/schemas.py` for Startup, Product, Paper, Job, News
 - `[ ]` Phase 4: Async Crawler Orchestrator
   - `[ ]` Implement `src/crawler/orchestrator.py` with concurrency, retries, and dynamic Playwright fallback
