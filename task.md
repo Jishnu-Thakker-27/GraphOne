@@ -20,20 +20,24 @@
   - `[x]` Implement `src/pipeline/schemas.py` for Startup, Product, Paper, Job, News
 - `[x]` Phase 5: Content Normalizer
   - `[x]` Implement `src/crawler/normalizer.py` (strip headers, footers, scripts, and format text)
-- `[/]` Phase 6: Strategy Selector
-  - `[ ]` Implement `src/pipeline/selector.py` (routes parsing depending on data format)
-- `[ ]` Phase 7: Multi-LLM Client & Pipeline Processor
+- `[x]` Phase 6: Strategy Selector
+  - `[x]` Implement `src/pipeline/selector.py` (routes parsing depending on data format)
+- `[/]` Phase 7: Hybrid Extraction Engine
+  - `[ ]` Implement API response parsing
+  - `[ ]` Implement HTML JSON-LD metadata extraction
+  - `[ ]` Implement rule-based parsing rules
+- `[ ]` Phase 8: Multi-LLM Orchestrator
   - `[ ]` Implement `src/llm/client.py` with multi-tier fallback (Gemini -> Groq -> DeepSeek) and caching
-  - `[ ]` Implement `src/pipeline/processor.py` for rule-based parsing and LLM orchestration
-- `[ ]` Phase 8: Schema Validator
+  - `[ ]` Implement `src/pipeline/processor.py` for LLM prompt orchestration
+- `[ ]` Phase 9: Schema Validator
   - `[ ]` Implement `src/pipeline/validator.py` using Pydantic schemas
-- `[ ]` Phase 9: Fuzzy Entity Resolution
+- `[ ]` Phase 10: Fuzzy Entity Resolution
   - `[ ]` Implement `src/resolution/resolver.py` (RapidFuzz matching + pre-seeded list of 50 AI startups)
-- `[ ]` Phase 10: Knowledge Delta Engine
+- `[ ]` Phase 11: Knowledge Delta Engine
   - `[ ]` Implement `src/delta/engine.py` (diff logic, ChangeHistory logs, and confidence checking)
-- `[ ]` Phase 11: CSV & Google Sheets Exporters
+- `[ ]` Phase 12: CSV & Google Sheets Exporters
   - `[ ]` Implement `src/exporters/sheets.py` (write to local outputs directory + gspread Sheets sync)
-- `[ ]` Phase 12: Metrics, API, Logging & Final Integration
+- `[ ]` Phase 13: Metrics, API, Logging & Final Integration
   - `[ ]` Implement `src/metrics/collector.py` (operational run counts)
   - `[ ]` Implement `src/api/` (health check, metrics, and changes endpoints)
   - `[ ]` Implement `src/utils/helpers.py` (Loguru JSON/human logging configuration)

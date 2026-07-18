@@ -8,10 +8,11 @@
 - [x] Phase 3: Async Crawler Engine
 - [x] Phase 4: Data Modeling & Validation
 - [x] Phase 5: Content Normalizer
-- [/] Phase 6: Strategy Selector
-- [ ] Phase 7: Multi-LLM Client & Pipeline Processor
-- [ ] Phase 8: Schema Validator
-- [ ] Phase 9: Fuzzy Entity Resolution
-- [ ] Phase 10: Knowledge Delta Engine
-- [ ] Phase 11: CSV & Google Sheets Exporters
-- [ ] Phase 12: Metrics, API, Logging & Final Integration
+- [x] Phase 6: Strategy Selector
+- [/] Phase 7: Hybrid Extraction Engine
+- [ ] Phase 8: Multi-LLM Orchestrator
+- [ ] Phase 9: Schema Validator
+- [ ] Phase 10: Fuzzy Entity Resolution
+- [ ] Phase 11: Knowledge Delta Engine
+- [ ] Phase 12: CSV & Google Sheets Exporters
+- [ ] Phase 13: Metrics, API, Logging & Final Integration

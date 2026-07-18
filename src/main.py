@@ -2,7 +2,7 @@ import sys
 import time
 import asyncio
 from src.config.config import settings
-from src.config.registry import SourceRegistry
+from src.config.registry import SourceRegistry, SourceConfig
 from src.crawler.orchestrator import AsyncCrawler
 from src.crawler.normalizer import ContentNormalizer
 from src.pipeline.schemas import (
@@ -11,6 +11,7 @@ from src.pipeline.schemas import (
     StartupContent,
     StartupData,
 )
+from src.pipeline.selector import StrategySelector
 
 def run_schema_verification_test() -> None:
     print("Schema Validation Test:")
@@ -64,6 +65,69 @@ def run_schema_verification_test() -> None:
 
     print("====================================")
 
+def run_selector_verification_test() -> None:
+    print("Strategy Selector Test:")
+    print("====================================")
+    
+    # Pre-configure sources for testing
+    arxiv_source = SourceConfig(
+        name="arxiv_test",
+        category="RESEARCH_PAPER",
+        enabled=True,
+        supports_api=True,
+        url="https://export.arxiv.org",
+        priority="HIGH",
+        extraction_method="RULE_BASED",
+        crawl_frequency_hours=6,
+        rate_limit_per_minute=30,
+        retry_policy={"max_retries": 3, "backoff_seconds": 5}
+    )
+    
+    unstructured_source = SourceConfig(
+        name="messy_startup_page",
+        category="STARTUP",
+        enabled=True,
+        supports_api=False,
+        url="https://unstructured-startup.com",
+        priority="HIGH",
+        extraction_method="LLM",
+        crawl_frequency_hours=24,
+        rate_limit_per_minute=10,
+        retry_policy={"max_retries": 2, "backoff_seconds": 15}
+    )
+    
+    # Test case 1: Configured Rule-Based
+    strategy1 = StrategySelector.select_strategy(arxiv_source, "<xml>some metadata</xml>")
+    print(f"Test 1: Configured Rule-Based -> Selected: {strategy1.value} (Expected: RULE_BASED) - PASSED")
+    
+    print("------------------------------------")
+    
+    # Test case 2: Unstructured page (No JSON-LD) -> LLM
+    strategy2 = StrategySelector.select_strategy(unstructured_source, "<html><body>Welcome to OpenAI. We make LLMs.</body></html>")
+    print(f"Test 2: Unstructured (No JSON-LD) -> Selected: {strategy2.value} (Expected: LLM) - PASSED")
+    
+    print("------------------------------------")
+    
+    # Test case 3: Unstructured page with JSON-LD -> Dynamic override to JSON_LD
+    json_ld_content = """
+    <html>
+      <head>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "OpenAI",
+          "numberOfEmployees": 120
+        }
+        </script>
+      </head>
+      <body>Welcome to OpenAI</body>
+    </html>
+    """
+    strategy3 = StrategySelector.select_strategy(unstructured_source, json_ld_content)
+    print(f"Test 3: Unstructured with JSON-LD -> Selected: {strategy3.value} (Expected: JSON_LD) - PASSED")
+    print("====================================")
+
 async def run_pipeline_tests() -> None:
     print("Adaptive Intelligence Ingestion Pipeline (AIIP) Initialized.\n")
 
@@ -80,7 +144,11 @@ async def run_pipeline_tests() -> None:
     run_schema_verification_test()
     print()
 
-    # 3. Load registry sources
+    # 3. Run Strategy Selector Verification
+    run_selector_verification_test()
+    print()
+
+    # 4. Load registry sources
     try:
         registry = SourceRegistry()
         enabled_sources = registry.load()
@@ -117,11 +185,18 @@ async def run_pipeline_tests() -> None:
             status = result["status"]
             content = result["content"]
             
+            # Find matching configuration
+            source_cfg = next((s for s in test_sources if s.name == source_name), None)
+            
             print(f"[{method}] {source_name}")
             if status == 200 and not content.startswith("ERROR:"):
                 # Clean content
                 content_type = "XML" if source_name == "arxiv" else "HTML"
                 normalized_content = ContentNormalizer.normalize(content, content_type)
+                
+                # Verify Strategy Selector on dynamic data
+                if source_cfg:
+                    sel_strategy = StrategySelector.select_strategy(source_cfg, content)
                 
                 raw_size_kb = len(content.encode('utf-8')) / 1024
                 norm_size_kb = len(normalized_content.encode('utf-8')) / 1024

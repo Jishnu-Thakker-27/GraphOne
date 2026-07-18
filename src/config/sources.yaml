@@ -3,7 +3,7 @@ sources:
     category: "RESEARCH_PAPER"
     enabled: true
     supports_api: true
-    url: "http://export.arxiv.org/api/query"
+    url: "http://export.arxiv.org/api/query?search_query=all:ai&max_results=1"
     priority: "HIGH"
     extraction_method: "RULE_BASED"
     crawl_frequency_hours: 6

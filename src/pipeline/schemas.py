@@ -27,6 +27,12 @@ class EntityRecordType(str, Enum):
     JOB = "JOB"
     NEWS = "NEWS"
 
+class ExtractionStrategy(str, Enum):
+    JSON_API = "JSON_API"
+    JSON_LD = "JSON_LD"
+    RULE_BASED = "RULE_BASED"
+    LLM = "LLM"
+
 # =========================================================================
 # Common Helper Models
 # =========================================================================
