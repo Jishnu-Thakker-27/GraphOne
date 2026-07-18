@@ -10,8 +10,8 @@
 - [x] Phase 5: Content Normalizer
 - [x] Phase 6: Strategy Selector
 - [x] Phase 7: Hybrid Extraction Engine
-- [/] Phase 8: Multi-LLM Orchestrator
-- [ ] Phase 9: Schema Validator
+- [x] Phase 8: Multi-LLM Orchestrator
+- [/] Phase 9: Schema Validator
 - [ ] Phase 10: Fuzzy Entity Resolution
 - [ ] Phase 11: Knowledge Delta Engine
 - [ ] Phase 12: CSV & Google Sheets Exporters

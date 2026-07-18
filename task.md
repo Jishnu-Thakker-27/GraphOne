@@ -26,10 +26,10 @@
   - `[x]` Implement API response parsing
   - `[x]` Implement HTML JSON-LD metadata extraction
   - `[x]` Implement rule-based parsing rules
-- `[/]` Phase 8: Multi-LLM Orchestrator
-  - `[ ]` Implement `src/llm/client.py` with multi-tier fallback (Gemini -> Groq -> DeepSeek) and caching
-  - `[ ]` Implement `src/pipeline/processor.py` for LLM prompt orchestration
-- `[ ]` Phase 9: Schema Validator
+- `[x]` Phase 8: Multi-LLM Orchestrator
+  - `[x]` Implement `src/llm/client.py` with multi-tier fallback (Gemini -> Groq -> DeepSeek) and caching
+  - `[x]` Implement `src/pipeline/processor.py` for LLM prompt orchestration
+- `[/]` Phase 9: Schema Validator
   - `[ ]` Implement `src/pipeline/validator.py` using Pydantic schemas
 - `[ ]` Phase 10: Fuzzy Entity Resolution
   - `[ ]` Implement `src/resolution/resolver.py` (RapidFuzz matching + pre-seeded list of 50 AI startups)

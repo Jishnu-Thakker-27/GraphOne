@@ -14,6 +14,7 @@ from src.pipeline.schemas import (
 )
 from src.pipeline.selector import StrategySelector
 from src.pipeline.extractor import HybridExtractionEngine
+from src.pipeline.processor import PipelineProcessor
 
 def run_schema_verification_test() -> None:
     print("Schema Validation Test:")
@@ -221,6 +222,22 @@ def run_extractor_verification_test() -> None:
         print(f"  Pricing Model: {prod['pricingModel']}")
     print("====================================")
 
+async def run_processor_verification_test() -> None:
+    print("Multi-LLM Orchestrator Test:")
+    print("====================================")
+    
+    processor = PipelineProcessor()
+    mock_html = "Some unstructured text mentioning DeepMind startup with 500 employees."
+    extracted = await processor.process_content("mock_source", "STARTUP", mock_html)
+    
+    print(f"Test 1: LLM Orchestration -> Extracted {len(extracted)} entity/entities - PASSED")
+    if extracted:
+        startup = extracted[0]["content"]
+        print(f"  Record Type: {extracted[0]['recordType']}")
+        print(f"  Name: '{startup['entityName']}'")
+        print(f"  Employees: {startup['data']['employeeCount']}")
+    print("====================================")
+
 async def run_pipeline_tests() -> None:
     print("Adaptive Intelligence Ingestion Pipeline (AIIP) Initialized.\n")
 
@@ -245,7 +262,11 @@ async def run_pipeline_tests() -> None:
     run_extractor_verification_test()
     print()
 
-    # 5. Load registry sources
+    # 5. Run Multi-LLM Orchestrator Verification
+    await run_processor_verification_test()
+    print()
+
+    # 6. Load registry sources
     try:
         registry = SourceRegistry()
         enabled_sources = registry.load()
