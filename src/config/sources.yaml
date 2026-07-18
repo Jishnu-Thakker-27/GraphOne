@@ -1,0 +1,65 @@
+sources:
+  - name: "arxiv"
+    category: "RESEARCH_PAPER"
+    enabled: true
+    supports_api: true
+    url: "http://export.arxiv.org/api/query"
+    priority: "HIGH"
+    extraction_method: "RULE_BASED"
+    crawl_frequency_hours: 6
+    rate_limit_per_minute: 30
+    retry_policy:
+      max_retries: 3
+      backoff_seconds: 5
+
+  - name: "huggingface_papers"
+    category: "RESEARCH_PAPER"
+    enabled: true
+    supports_api: true
+    url: "https://huggingface.co/api/daily_papers"
+    priority: "MEDIUM"
+    extraction_method: "RULE_BASED"
+    crawl_frequency_hours: 12
+    rate_limit_per_minute: 20
+    retry_policy:
+      max_retries: 3
+      backoff_seconds: 10
+
+  - name: "product_hunt"
+    category: "PRODUCT"
+    enabled: true
+    supports_api: false
+    url: "https://www.producthunt.com"
+    priority: "HIGH"
+    extraction_method: "LLM"
+    crawl_frequency_hours: 24
+    rate_limit_per_minute: 10
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 15
+
+  - name: "github_trending_ai"
+    category: "PRODUCT"
+    enabled: true
+    supports_api: false
+    url: "https://github.com/trending?l=python"
+    priority: "MEDIUM"
+    extraction_method: "RULE_BASED"
+    crawl_frequency_hours: 12
+    rate_limit_per_minute: 15
+    retry_policy:
+      max_retries: 3
+      backoff_seconds: 5
+
+  - name: "yc_companies"
+    category: "STARTUP"
+    enabled: true
+    supports_api: true
+    url: "https://yc-oss.github.io/api/companies/all.json"
+    priority: "HIGH"
+    extraction_method: "RULE_BASED"
+    crawl_frequency_hours: 24
+    rate_limit_per_minute: 10
+    retry_policy:
+      max_retries: 3
+      backoff_seconds: 10
