@@ -635,6 +635,16 @@ class KnowledgeDeltaEngine:
                 dt_existing = existing_val if isinstance(existing_val, datetime) else DateNormalizer.normalize(existing_val)
                 dt_incoming = incoming_val if isinstance(incoming_val, datetime) else DateNormalizer.normalize(incoming_val)
                 if dt_existing and dt_incoming:
+                    # Ensure both datetimes are timezone-aware (UTC) before comparison.
+                    # MongoDB may return naive datetimes; DateNormalizer always returns aware ones.
+                    if dt_existing.tzinfo is None:
+                        dt_existing = dt_existing.replace(tzinfo=timezone.utc)
+                    else:
+                        dt_existing = dt_existing.astimezone(timezone.utc)
+                    if dt_incoming.tzinfo is None:
+                        dt_incoming = dt_incoming.replace(tzinfo=timezone.utc)
+                    else:
+                        dt_incoming = dt_incoming.astimezone(timezone.utc)
                     earliest = min(dt_existing, dt_incoming)
                     # Keep the string format of whichever is earlier
                     target_val = existing_val if earliest == dt_existing else incoming_val

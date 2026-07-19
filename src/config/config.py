@@ -19,6 +19,9 @@ class Settings:
         self.GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
         self.GROQ_API_KEY: str | None = os.getenv("GROQ_API_KEY")
         self.DEEPSEEK_API_KEY: str | None = os.getenv("DEEPSEEK_API_KEY")
+        # Model name is configuration-driven to avoid hardcoded deprecations.
+        # Override in .env with GEMINI_MODEL=<model-name> as needed.
+        self.GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
         # Database Settings
         self.MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")

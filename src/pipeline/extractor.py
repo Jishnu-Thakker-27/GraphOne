@@ -6,6 +6,7 @@ and API parsing, outputting raw dictionary data that matches Pydantic entity sch
 """
 
 import json
+import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -45,29 +46,41 @@ class HybridExtractionEngine:
         entities = []
         if source_name == "arxiv":
             try:
-                soup = BeautifulSoup(content, "xml")
-                entries = soup.find_all("entry")
+                # Use Python's stdlib xml.etree.ElementTree — no lxml dependency needed.
+                # The arXiv Atom feed uses the standard Atom namespace.
+                ATOM_NS = "http://www.w3.org/2005/Atom"
+                root = ET.fromstring(content)
+                entries = root.findall(f"{{{ATOM_NS}}}entry")
                 for entry in entries:
-                    title_elem = entry.find("title")
-                    title_text = title_elem.text.strip() if title_elem else "Unknown Title"
-                    
-                    authors = [
-                        author.find("name").text.strip()
-                        for author in entry.find_all("author")
-                        if author.find("name")
-                    ]
-                    
-                    id_elem = entry.find("id")
-                    paper_url = id_elem.text.strip() if id_elem else ""
-                    
-                    published_elem = entry.find("published")
+                    title_elem = entry.find(f"{{{ATOM_NS}}}title")
+                    title_text = title_elem.text.strip() if title_elem is not None and title_elem.text else "Unknown Title"
+
+                    authors = []
+                    for author in entry.findall(f"{{{ATOM_NS}}}author"):
+                        name_elem = author.find(f"{{{ATOM_NS}}}name")
+                        if name_elem is not None and name_elem.text:
+                            authors.append(name_elem.text.strip())
+
+                    id_elem = entry.find(f"{{{ATOM_NS}}}id")
+                    paper_url = id_elem.text.strip() if id_elem is not None and id_elem.text else ""
+
                     published_date = datetime.now(timezone.utc)
-                    if published_elem:
+                    published_elem = entry.find(f"{{{ATOM_NS}}}published")
+                    if published_elem is not None and published_elem.text:
                         try:
                             published_date = datetime.fromisoformat(published_elem.text.replace("Z", "+00:00"))
                         except ValueError:
                             pass
-                        
+
+                    # Extract GitHub URL if present in the summary/abstract
+                    summary_elem = entry.find(f"{{{ATOM_NS}}}summary")
+                    summary_text = summary_elem.text if summary_elem is not None and summary_elem.text else ""
+                    github_url = None
+                    if summary_text:
+                        github_match = re.search(r"https?://(?:www\.)?github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+", summary_text)
+                        if github_match:
+                            github_url = github_match.group(0).rstrip(".")
+
                     entities.append({
                         "recordType": "RESEARCH_PAPER",
                         "content": {
@@ -75,7 +88,7 @@ class HybridExtractionEngine:
                             "authors": authors,
                             "paper_url": paper_url,
                             "published_date": published_date,
-                            "github_url": None,
+                            "github_url": github_url,
                             "github_stars": None
                         }
                     })
@@ -115,7 +128,32 @@ class HybridExtractionEngine:
     def extract_rule_based(cls, source_name: str, content: str) -> List[Dict[str, Any]]:
         """Parses HTML using custom rules matched to the source name."""
         entities = []
-        if source_name == "github_trending_ai":
+        if source_name == "yc_companies":
+            try:
+                companies = json.loads(content)
+                for item in companies:
+                    if isinstance(item, dict):
+                        emp_count = None
+                        team_size = item.get("team_size") or item.get("teamSize")
+                        if team_size is not None:
+                            try:
+                                emp_count = int(team_size)
+                            except ValueError:
+                                pass
+                        
+                        entities.append({
+                            "recordType": "STARTUP",
+                            "content": {
+                                "entityName": item.get("name", "Unknown Startup"),
+                                "data": {
+                                    "employeeCount": emp_count
+                                }
+                            }
+                        })
+                logger.info(f"Rule-based Extractor completed | Source: {source_name} | Extracted {len(entities)} startups")
+            except Exception as e:
+                logger.error(f"YC Companies rule-based JSON parsing failed: {e}")
+        elif source_name == "github_trending_ai":
             try:
                 soup = BeautifulSoup(content, "html.parser")
                 articles = soup.find_all("article", class_="Box-row")
@@ -132,12 +170,17 @@ class HybridExtractionEngine:
                     desc_elem = article.find("p", class_="col-9")
                     desc = desc_elem.text.strip() if desc_elem else ""
                     
+                    # Construct GitHub URL from href
+                    href = h2.a.get("href", "").strip("/")
+                    github_url = f"https://github.com/{href}" if href else None
+
                     # We map github repo as Product
                     entities.append({
                         "recordType": "PRODUCT",
                         "content": {
                             "startupName": repo_name,
-                            "pricingModel": "FREE"
+                            "pricingModel": "FREE",
+                            "github_url": github_url
                         }
                     })
                 logger.info(f"Rule-based Extractor completed | Source: {source_name} | Extracted {len(entities)} products")

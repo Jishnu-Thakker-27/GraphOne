@@ -5,10 +5,13 @@ Orchestrates semantic LLM extraction for unstructured normalized contents.
 """
 
 import json
+import hashlib
 from typing import Any, Dict, List
 from loguru import logger
 from src.llm.client import MultiLLMClient
 from src.pipeline.schemas import EntityRecordType
+from src.database.repositories import ContentCacheRepository
+from src.metrics.collector import metrics_collector
 
 class PipelineProcessor:
     """Coordinates LLM-based entity extraction and formatting."""
@@ -20,9 +23,36 @@ class PipelineProcessor:
         """
         Generates system instructions for the requested entity category,
         calls the LLM orchestrator, and parses the extracted entity results.
+        Uses SHA-256 content hashing to cache and retrieve past LLM extractions.
         """
         logger.info(f"Processing content via LLM | Source: {source_name} | Category: {category}")
         
+        # Calculate SHA-256 hash of the normalized content
+        content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        
+        # Check cache repository
+        cache_repo = ContentCacheRepository()
+        try:
+            cached_extraction = cache_repo.get_cached(content_hash)
+            if cached_extraction is not None:
+                logger.info(f"LLM extraction cache hit for {source_name} (hash: {content_hash})")
+                metrics_collector.increment("llm_cache_hits")
+                entities = cached_extraction.get("entities", [])
+                results = []
+                for item in entities:
+                    if isinstance(item, dict):
+                        results.append({
+                            "recordType": category,
+                            "content": item
+                        })
+                return results
+        except Exception as cache_err:
+            logger.warning(f"Failed to fetch from LLM cache: {cache_err}")
+
+        # Cache miss: increment metrics and run LLM
+        metrics_collector.increment("llm_cache_misses")
+        metrics_collector.increment("llm_calls")
+
         system_instruction = self._get_system_instruction(category)
         prompt = f"Crawled source content from '{source_name}':\n\n{content}\n\nExtract all entities of type '{category}'."
 
@@ -36,6 +66,13 @@ class PipelineProcessor:
                 logger.warning(f"LLM returned invalid format (expected list under 'entities' key): {raw_json[:200]}")
                 return []
                 
+            # Cache the raw extracted entities list
+            try:
+                cache_repo.cache_extraction(content_hash, {"entities": entities})
+                logger.info(f"Cached LLM extraction for {source_name} (hash: {content_hash})")
+            except Exception as cache_err:
+                logger.warning(f"Failed to cache LLM extraction: {cache_err}")
+
             # Inject recordType into each item
             results = []
             for item in entities:

@@ -14,5 +14,5 @@
 - [x] Phase 9: Schema Validator
 - [x] Phase 10: Fuzzy Entity Resolution
 - [x] Phase 11: Knowledge Delta Engine
-- [/] Phase 12: CSV & Google Sheets Exporters
-- [ ] Phase 13: Metrics, API, Logging & Final Integration
+- [x] Phase 12: CSV & Google Sheets Exporters
+- [x] Phase 13: Metrics, API, Logging & Final Integration

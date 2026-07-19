@@ -16,7 +16,7 @@ pydantic>=2.8.0
 aiohttp>=3.10.0
 playwright>=1.46.0
 beautifulsoup4>=4.12.3
-selectolax>=0.3.21
+# selectolax removed: not imported anywhere in the source tree
 
 # AI
 google-genai>=1.30.0
@@ -26,6 +26,7 @@ rapidfuzz>=3.9.0
 
 # Data Export
 pandas>=2.2.2
+openpyxl>=3.1.2
 gspread>=6.1.2
 google-auth>=2.35.0
 

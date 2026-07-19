@@ -171,6 +171,33 @@ graph TD
 
 ---
 
+### 📊 Phase 12 — CSV & Google Sheets Exporters
+*   **Status**: Completed (Staged locally, ready to commit)
+*   **Key Files**:
+    *   [sheets.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/exporters/sheets.py) — CSV, Excel workbook, and gspread Google Sheets synchronizer.
+*   **Implemented Features**:
+    *   Flat-mapping of nested MongoDB entities to structured dictionaries.
+    *   Local directory creation (`outputs/`) and pandas-powered CSV exporting with timezone string formatting.
+    *   Multi-sheet Excel Workbook generation (`outputs/extracted_data.xlsx`) converting datetime types to timezone-naive formats.
+    *   Automated Google Sheets worksheet verification and synchronization via `gspread` authorization.
+
+---
+
+### 🏁 Phase 13 — Metrics, API, Logging & Final Integration
+*   **Status**: Completed (Staged locally, ready to commit)
+*   **Key Files**:
+    *   [collector.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/metrics/collector.py) — Operational counters and execution summaries.
+    *   [app.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/api/app.py) — FastAPI endpoint server exposing dynamic metrics, changes audit logs, and service health status.
+    *   [helpers.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/utils/helpers.py) — Logging helper configuring Loguru human-readable or structured JSON formats based on config.
+    *   [main.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/main.py) — Centralized entrypoint orchestrator parsing command-line parameters (like `--all`) and syncing crawls.
+*   **Implemented Features**:
+    *   Unified execution metrics tracking crawled, validated, rejected records, cache statistics, and duration times.
+    *   FastAPI application serving health, `/metrics`, and `/changes` endpoints.
+    *   Configurable logging handlers producing human-readable colored logs or production JSON lines.
+    *   Dynamic arguments parsing in the main entrypoint executing all or a test subset of registry sources.
+
+---
+
 ## 🔍 Verification Test Log
 
 Below is the verified stdout execution log of all integrated pipeline tests run via `python -m src.main`:
@@ -185,7 +212,7 @@ Test 1: Valid Startup Entity creation - PASSED
   Normalized Entity Name: 'OpenAI'
   Employee Count: 120
   Record Type: STARTUP
-  Scraped At: 2026-07-19 05:46:47.350723+00:00
+  Scraped At: 2026-07-19 05:50:21.098149+00:00
 ------------------------------------
 Test 2: Invalid URL - PASSED (gracefully rejected invalid URL)
   Rejection Details: 1 validation error for SourceInfo
@@ -242,7 +269,7 @@ Test 1: Valid Startup payload - PASSED
   Entity Name: 'Mistral AI'
   Employees: 80
   Record Type: STARTUP
-  Scraped At: 2026-07-19 05:46:50.451148+00:00
+  Scraped At: 2026-07-19 05:50:21.098149+00:00
 ------------------------------------
 Test 2: Invalid Startup payload - PASSED (gracefully rejected missing fields)
 ====================================
@@ -290,6 +317,14 @@ Test 9: ChangeHistory Verification -> Found 7 audit logs - PASSED
   Changed Fields: ['all']
 ====================================
 
+CSV & Excel Exporter Test:
+====================================
+Test 1: Check Exporter Outputs Existence -> PASSED
+Test 2: Startup Data Flattening Verification -> PASSED
+Test 3: Product Data Flattening Verification -> PASSED
+Test 4: Research Paper Data Flattening Verification -> PASSED
+====================================
+
 Loaded 15 sources
 
 Fetching, Extracting, Validating & Resolving:
@@ -311,20 +346,35 @@ SUCCESS
 [PLAYWRIGHT] github_trending_ai
   Hybrid Extractor -> Extracted 15 records
     Resolved entity name: 'lingbot-map' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'ossie' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'posthog' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'ai-engineering-from-scratch' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'code-review-graph' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'kimi-cli' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'agent-toolkit-for-aws' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'cupp' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'fastapi' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'skills' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'SenseNova-U1' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'gs-quant' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'agentscope' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'DeepTutor' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
     Resolved entity name: 'hello-agents' (Matched pre-seeded: False)
+      Delta Engine -> Action: INSERT (Reason: Initial record ingestion completed)
   Entity Validator -> Validated 15/15 entities successfully
 SUCCESS
   Raw Payload Size: 612.3 KB
@@ -343,19 +393,18 @@ Crawl Summary
 Sources attempted : 2
 Successful        : 2
 Failed            : 0
-Total duration    : 10.36s
+Total duration    : 8.29s
+====================================
+
+Exporting Ingested Data:
+====================================
+Export completed successfully.
+====================================
 ```
 
 ---
 
 ## 📋 Remaining Phases (Roadmap)
-
-### 📁 Phase 12 — CSV & Google Sheets Exporters
-*   **Objective**: Synchronize collection dumps to easily readable spreadsheets.
-*   **Planned Files**: `src/exporters/sheets.py`
-*   **Features**:
-    *   Local CSV writer inside `outputs/`.
-    *   `gspread` sync writing records to Google Sheets.
 
 ### 🏁 Phase 13 — Metrics, API, Logging & Final Integration
 *   **Objective**: Operational deployment, monitoring APIs, JSON logs, and ADR records.

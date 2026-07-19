@@ -40,11 +40,11 @@
   - `[x]` Remove DELTA_CONFIDENCE_THRESHOLD from config settings
   - `[x]` Implement deterministic merge rules, fingerprint checking, and DeltaResult in engine.py
   - `[x]` Rewrite verification tests in main.py to test precedence, merging, dates, list unions, and fingerprint skips
-- `[/]` Phase 12: CSV & Google Sheets Exporters
-  - `[ ]` Implement `src/exporters/sheets.py` (write to local outputs directory + gspread Sheets sync)
-- `[ ]` Phase 13: Metrics, API, Logging & Final Integration
-  - `[ ]` Implement `src/metrics/collector.py` (operational run counts)
-  - `[ ]` Implement `src/api/` (health check, metrics, and changes endpoints)
-  - `[ ]` Implement `src/utils/helpers.py` (Loguru JSON/human logging configuration)
-  - `[ ]` Create Architecture Decision Records (ADRs) under `docs/ADR/`
-  - `[ ]` Assemble pipeline orchestrator in `src/main.py`
+- `[x]` Phase 12: CSV & Google Sheets Exporters
+  - `[x]` Implement `src/exporters/sheets.py` (write to local outputs directory + gspread Sheets sync)
+- `[x]` Phase 13: Metrics, API, Logging & Final Integration
+  - `[x]` Implement `src/metrics/collector.py` (operational run counts)
+  - `[x]` Implement `src/api/` (health check, metrics, and changes endpoints)
+  - `[x]` Implement `src/utils/helpers.py` (Loguru JSON/human logging configuration)
+  - `[x]` Create Architecture Decision Records (ADRs) under `docs/ADR/`
+  - `[x]` Assemble pipeline orchestrator in `src/main.py`

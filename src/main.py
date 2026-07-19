@@ -23,6 +23,8 @@ from src.pipeline.processor import PipelineProcessor
 from src.pipeline.validator import EntityValidator
 from src.resolution.resolver import EntityResolver
 from src.delta.engine import KnowledgeDeltaEngine
+from src.exporters.sheets import DataExporter
+from src.utils.helpers import setup_logging
 from src.database.repositories import (
     StartupRepository,
     ProductRepository,
@@ -505,7 +507,105 @@ async def run_delta_verification_test() -> None:
         print(f"  Changed Fields: {log['changed_fields']}")
     print("====================================")
 
-async def run_pipeline_tests() -> None:
+def run_exporter_verification_test() -> None:
+    print("CSV & Excel Exporter Test:")
+    print("====================================")
+    
+    # 1. Setup mock data
+    startup_repo = StartupRepository()
+    product_repo = ProductRepository()
+    paper_repo = ResearchPaperRepository()
+    
+    startup_repo.delete_many({})
+    product_repo.delete_many({})
+    paper_repo.delete_many({})
+    
+    # Insert one test record for each
+    startup_repo.insert({
+        "recordType": "STARTUP",
+        "content": {"entityName": "Exporter Inc", "data": {"employeeCount": 42}},
+        "source": {"name": "test_src", "url": "https://test.com"},
+        "collectedAt": "2026-07-19T00:00:00Z",
+        "observedAt": "2026-07-19T00:00:00Z",
+        "updatedAt": "2026-07-19T00:00:00Z"
+    })
+
+    product_repo.insert({
+        "recordType": "PRODUCT",
+        "content": {"startupName": "Exporter Inc", "pricingModel": "FREE", "github_url": "https://github.com/exporter"},
+        "source": {"name": "test_src", "url": "https://test.com"},
+        "collectedAt": "2026-07-19T00:00:00Z",
+        "observedAt": "2026-07-19T00:00:00Z",
+        "updatedAt": "2026-07-19T00:00:00Z"
+    })
+
+    paper_repo.insert({
+        "recordType": "RESEARCH_PAPER",
+        "content": {
+            "title": "Exporter Research",
+            "authors": ["Alice", "Bob"],
+            "paper_url": "https://arxiv.org/abs/1234",
+            "published_date": "2026-07-19T00:00:00Z"
+        },
+        "source": {"name": "test_src", "url": "https://test.com"},
+        "collectedAt": "2026-07-19T00:00:00Z",
+        "observedAt": "2026-07-19T00:00:00Z",
+        "updatedAt": "2026-07-19T00:00:00Z"
+    })
+    
+    # 2. Run Exporter
+    test_dir = "test_outputs"
+    exporter = DataExporter()
+    exporter.export_to_local(test_dir)
+    
+    # 3. Assertions
+    import os
+    import shutil
+    
+    csvs = ["startups.csv", "products.csv", "research_papers.csv"]
+    xlsx = "extracted_data.xlsx"
+    
+    all_files_exist = True
+    for csv_file in csvs:
+        path = os.path.join(test_dir, csv_file)
+        if not os.path.exists(path):
+            all_files_exist = False
+            print(f"  Missing file: {csv_file}")
+            
+    xlsx_path = os.path.join(test_dir, xlsx)
+    if not os.path.exists(xlsx_path):
+        all_files_exist = False
+        print(f"  Missing file: {xlsx}")
+        
+    if all_files_exist:
+        print("Test 1: Check Exporter Outputs Existence -> PASSED")
+    else:
+        print("Test 1: Check Exporter Outputs Existence -> FAILED")
+        
+    # Verify content in dataframe conversion
+    dfs = exporter.generate_dataframes()
+    if len(dfs["Startups"]) == 1 and dfs["Startups"].iloc[0]["Entity Name"] == "Exporter Inc":
+        print("Test 2: Startup Data Flattening Verification -> PASSED")
+    else:
+        print("Test 2: Startup Data Flattening Verification -> FAILED")
+        
+    if len(dfs["Products"]) == 1 and dfs["Products"].iloc[0]["Startup Name"] == "Exporter Inc":
+        print("Test 3: Product Data Flattening Verification -> PASSED")
+    else:
+        print("Test 3: Product Data Flattening Verification -> FAILED")
+        
+    if len(dfs["Research Papers"]) == 1 and dfs["Research Papers"].iloc[0]["Title"] == "Exporter Research":
+        print("Test 4: Research Paper Data Flattening Verification -> PASSED")
+    else:
+        print("Test 4: Research Paper Data Flattening Verification -> FAILED")
+        
+    # Clean up test directories
+    if os.path.exists(test_dir):
+        shutil.rmtree(test_dir)
+        
+    print("====================================")
+
+async def run_pipeline_tests(run_all: bool = False) -> None:
     print("Adaptive Intelligence Ingestion Pipeline (AIIP) Initialized.\n")
 
     # 1. Validate environment configuration
@@ -545,7 +645,11 @@ async def run_pipeline_tests() -> None:
     await run_delta_verification_test()
     print()
 
-    # 9. Load registry sources
+    # 9. Run Exporter Verification
+    run_exporter_verification_test()
+    print()
+
+    # 10. Load registry sources
     try:
         registry = SourceRegistry()
         enabled_sources = registry.load()
@@ -554,15 +658,18 @@ async def run_pipeline_tests() -> None:
         print(f"CRITICAL SOURCE REGISTRY ERROR: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Filter out one API source (arxiv) and one webpage source (github_trending_ai)
-    api_source = next((s for s in enabled_sources if s.name == "arxiv"), None)
-    web_source = next((s for s in enabled_sources if s.name == "github_trending_ai"), None)
+    if run_all:
+        test_sources = enabled_sources
+    else:
+        # Filter out one API source (arxiv) and one webpage source (github_trending_ai)
+        api_source = next((s for s in enabled_sources if s.name == "arxiv"), None)
+        web_source = next((s for s in enabled_sources if s.name == "github_trending_ai"), None)
 
-    if not api_source or not web_source:
-        print("CRITICAL ERROR: Example sources 'arxiv' and 'github_trending_ai' must be defined in sources.yaml", file=sys.stderr)
-        sys.exit(1)
+        if not api_source or not web_source:
+            print("CRITICAL ERROR: Example sources 'arxiv' and 'github_trending_ai' must be defined in sources.yaml", file=sys.stderr)
+            sys.exit(1)
 
-    test_sources = [api_source, web_source]
+        test_sources = [api_source, web_source]
 
     print("Fetching, Extracting, Validating & Resolving:")
     print("====================================")
@@ -604,6 +711,7 @@ async def run_pipeline_tests() -> None:
                         # Validate and resolve extracted items
                         source_info = SourceInfo(name=source_cfg.name, url=source_cfg.url)
                         valid_entities = []
+                        delta_engine = KnowledgeDeltaEngine()
                         for raw_entity in extracted:
                             validated = EntityValidator.validate(raw_entity, source_info)
                             if validated:
@@ -612,14 +720,19 @@ async def run_pipeline_tests() -> None:
                                 # Run name through resolver to standardize
                                 if validated.recordType.value == "STARTUP":
                                     resolved_name, matched = resolver.resolve(validated.content.entityName)
+                                    validated.content.entityName = resolved_name
                                 elif validated.recordType.value == "PRODUCT":
                                     resolved_name, matched = resolver.resolve(validated.content.startupName)
+                                    validated.content.startupName = resolved_name
                                 else:
                                     resolved_name = "N/A"
                                     matched = False
                                     
                                 if resolved_name != "N/A":
                                     print(f"    Resolved entity name: '{resolved_name}' (Matched pre-seeded: {matched})")
+                                    # Process through Knowledge Delta Engine
+                                    delta_res = await delta_engine.process_entity_update(validated)
+                                    print(f"      Delta Engine -> Action: {delta_res.action} (Reason: {delta_res.reason})")
                                     
                         print(f"  Entity Validator -> Validated {len(valid_entities)}/{len(extracted)} entities successfully")
                 
@@ -652,9 +765,24 @@ async def run_pipeline_tests() -> None:
     print(f"Successful        : {successful}")
     print(f"Failed            : {failed}")
     print(f"Total duration    : {total_duration:.2f}s")
+    print("====================================")
+
+    print("\nExporting Ingested Data:")
+    print("====================================")
+    exporter = DataExporter()
+    exporter.export_to_local()
+    exporter.export_to_google_sheets()
+    print("Export completed successfully.")
+    print("====================================")
 
 def main() -> None:
-    asyncio.run(run_pipeline_tests())
+    import argparse
+    parser = argparse.ArgumentParser(description="Adaptive Intelligence Ingestion Pipeline (AIIP)")
+    parser.add_argument("--all", action="store_true", help="Run all enabled sources in registry")
+    args, unknown = parser.parse_known_args()
+
+    setup_logging()
+    asyncio.run(run_pipeline_tests(run_all=args.all))
 
 if __name__ == "__main__":
     main()

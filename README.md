@@ -309,7 +309,7 @@ Run MongoDB locally or configure a MongoDB Atlas connection.
 ## 5. Run the Pipeline
 
 ```bash
-python src/main.py
+python -m src.main
 ```
 
 ---

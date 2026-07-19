@@ -66,6 +66,12 @@ class BaseRepository:
         query = query or {}
         return self.collection.count_documents(query)
 
+    def delete_many(self, query: Dict[str, Any] = None) -> int:
+        """Deletes multiple documents matching the query and returns the deleted count."""
+        query = query or {}
+        result = self.collection.delete_many(query)
+        return result.deleted_count
+
 
 class StartupRepository(BaseRepository):
     """Repository for Startup entities."""
