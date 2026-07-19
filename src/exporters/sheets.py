@@ -179,17 +179,34 @@ class DataExporter:
 
         # 2. Export Excel Workbook
         excel_path = os.path.join(output_dir, "extracted_data.xlsx")
+        excel_preferred_dir = os.path.join(output_dir, "excel")
+        excel_preferred_path = os.path.join(excel_preferred_dir, "AIIP_Output.xlsx")
+        
+        os.makedirs(excel_preferred_dir, exist_ok=True)
+        
         try:
+            # Write to legacy path (all sheets)
             with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
                 for name, df in dfs.items():
-                    # Even if empty, write headers
                     df_to_save = df.copy()
                     for col in df_to_save.columns:
-                        # Convert tz-aware datetimes to tz-naive strings for Excel compatibility
                         if pd.api.types.is_datetime64_any_dtype(df_to_save[col]):
                             df_to_save[col] = df_to_save[col].dt.strftime('%Y-%m-%d %H:%M:%S')
                     df_to_save.to_excel(writer, sheet_name=name, index=False)
             logger.info(f"Exported Excel Workbook: {excel_path}")
+            
+            # Write to assignment-preferred path (only the 5 main sheets)
+            main_sheets = ["Startups", "Products", "Research Papers", "Jobs", "News"]
+            with pd.ExcelWriter(excel_preferred_path, engine="openpyxl") as writer:
+                for name in main_sheets:
+                    df = dfs.get(name, pd.DataFrame())
+                    df_to_save = df.copy()
+                    for col in df_to_save.columns:
+                        if pd.api.types.is_datetime64_any_dtype(df_to_save[col]):
+                            df_to_save[col] = df_to_save[col].dt.strftime('%Y-%m-%d %H:%M:%S')
+                    df_to_save.to_excel(writer, sheet_name=name, index=False)
+            logger.info(f"Exported Preferred Excel Workbook: {excel_preferred_path}")
+            
         except Exception as e:
             logger.error(f"Failed to write Excel workbook: {e}")
 
