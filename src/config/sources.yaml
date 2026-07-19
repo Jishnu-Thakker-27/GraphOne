@@ -3,7 +3,7 @@ sources:
     category: "RESEARCH_PAPER"
     enabled: true
     supports_api: true
-    url: "http://export.arxiv.org/api/query?search_query=all:ai&max_results=1"
+    url: "http://export.arxiv.org/api/query?search_query=all:ai"
     priority: "HIGH"
     precedence: 100
     extraction_method: "API"
@@ -12,10 +12,13 @@ sources:
     retry_policy:
       max_retries: 3
       backoff_seconds: 5
+    research_target_count: 1100
+    batch_size: 250
+    max_results_per_request: 250
 
   - name: "huggingface_papers"
     category: "RESEARCH_PAPER"
-    enabled: true
+    enabled: false
     supports_api: true
     url: "https://huggingface.co/api/daily_papers"
     priority: "MEDIUM"
@@ -29,7 +32,7 @@ sources:
 
   - name: "product_hunt"
     category: "PRODUCT"
-    enabled: true
+    enabled: false
     supports_api: false
     url: "https://www.producthunt.com"
     priority: "HIGH"
@@ -102,7 +105,7 @@ sources:
     category: "NEWS"
     enabled: true
     supports_api: false
-    url: "https://www.wired.com/category/science/ai/"
+    url: "https://www.wired.com/tag/artificial-intelligence/"
     priority: "LOW"
     precedence: 40
     extraction_method: "LLM"
@@ -125,12 +128,15 @@ sources:
     retry_policy:
       max_retries: 2
       backoff_seconds: 20
+    # React SPA — must wait for networkidle so JS renders article cards
+    playwright_wait: "networkidle"
+    playwright_timeout_seconds: 60
 
   - name: "zdnet_ai"
     category: "NEWS"
     enabled: true
     supports_api: false
-    url: "https://www.zdnet.com/category/artificial-intelligence/"
+    url: "https://www.zdnet.com/topic/artificial-intelligence/"
     priority: "LOW"
     precedence: 40
     extraction_method: "LLM"
@@ -171,7 +177,7 @@ sources:
 
   - name: "remote_co_ai"
     category: "JOB"
-    enabled: true
+    enabled: false   # Disabled: page consistently times out at 30s — zero contribution
     supports_api: false
     url: "https://remote.co/remote-jobs/developer"
     priority: "MEDIUM"
@@ -210,3 +216,95 @@ sources:
     retry_policy:
       max_retries: 1
       backoff_seconds: 30
+
+  - name: "github_products_api"
+    category: "PRODUCT"
+    enabled: true
+    supports_api: true
+    url: "https://api.github.com/search/repositories?q=topic:artificial-intelligence"
+    priority: "HIGH"
+    precedence: 80
+    extraction_method: "API"
+    crawl_frequency_hours: 12
+    rate_limit_per_minute: 30
+    retry_policy:
+      max_retries: 3
+      backoff_seconds: 5
+    research_target_count: 1000
+    batch_size: 100
+    max_results_per_request: 100
+
+  - name: "github_products_api_llm"
+    category: "PRODUCT"
+    enabled: true
+    supports_api: true
+    url: "https://api.github.com/search/repositories?q=topic:llm"
+    priority: "HIGH"
+    precedence: 80
+    extraction_method: "API"
+    crawl_frequency_hours: 12
+    rate_limit_per_minute: 30
+    retry_policy:
+      max_retries: 3
+      backoff_seconds: 5
+    research_target_count: 100
+    batch_size: 100
+    max_results_per_request: 100
+
+  # --- New high-quality news sources ---
+  - name: "google_ai_blog"
+    category: "NEWS"
+    enabled: true
+    supports_api: false
+    url: "https://blog.google/technology/ai/"
+    priority: "HIGH"
+    precedence: 70
+    extraction_method: "LLM"
+    crawl_frequency_hours: 24
+    rate_limit_per_minute: 10
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 15
+
+  - name: "huggingface_blog"
+    category: "NEWS"
+    enabled: true
+    supports_api: false
+    url: "https://huggingface.co/blog"
+    priority: "HIGH"
+    precedence: 70
+    extraction_method: "LLM"
+    crawl_frequency_hours: 24
+    rate_limit_per_minute: 10
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 15
+
+  # --- New high-quality job sources (confirmed accessible) ---
+  - name: "aijobsboard"
+    category: "JOB"
+    enabled: true
+    supports_api: false
+    url: "https://aijobs.ai/"
+    priority: "HIGH"
+    precedence: 70
+    extraction_method: "LLM"
+    crawl_frequency_hours: 24
+    rate_limit_per_minute: 10
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 15
+
+  - name: "remoteok_ai"
+    category: "JOB"
+    enabled: true
+    supports_api: false
+    url: "https://remoteok.com/remote-ai-jobs"
+    priority: "HIGH"
+    precedence: 70
+    extraction_method: "LLM"
+    crawl_frequency_hours: 24
+    rate_limit_per_minute: 10
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 15

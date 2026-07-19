@@ -95,6 +95,22 @@ class HybridExtractionEngine:
                 logger.info(f"API Extractor completed | Source: {source_name} | Extracted {len(entities)} papers")
             except Exception as e:
                 logger.error(f"Failed to parse arXiv Atom feed XML: {e}")
+        elif source_name in ("github_products_api", "github_products_api_llm"):
+            try:
+                data = json.loads(content)
+                for item in data.get("items", []):
+                    # We map github repo as Product
+                    entities.append({
+                        "recordType": "PRODUCT",
+                        "content": {
+                            "startupName": item.get("name") or "Unknown Product",
+                            "pricingModel": "FREE",
+                            "github_url": item.get("html_url")
+                        }
+                    })
+                logger.info(f"API Extractor completed | Source: {source_name} | Extracted {len(entities)} products")
+            except Exception as e:
+                logger.error(f"Failed to parse GitHub products API JSON: {e}")
         return entities
 
     @classmethod
@@ -266,6 +282,55 @@ class HybridExtractionEngine:
                     "github_url": None,
                     "github_stars": None,
                     "published_date": published_date
+                }
+            }
+
+        # Map JobPosting -> JOB
+        elif schema_type == "JobPosting":
+            hiring_org = item.get("hiringOrganization", {})
+            company_name = "Unknown Employer"
+            if isinstance(hiring_org, dict):
+                company_name = hiring_org.get("name") or hiring_org.get("legalName") or "Unknown Employer"
+            elif isinstance(hiring_org, str):
+                company_name = hiring_org
+
+            # Determine remote
+            is_remote = False
+            job_loc = item.get("jobLocationType") or item.get("jobLocation")
+            if job_loc:
+                loc_str = str(job_loc).lower()
+                if "remote" in loc_str or "telecommute" in loc_str:
+                    is_remote = True
+            
+            title = item.get("title", "Unknown Role")
+            
+            # Map role_family based on title
+            role_family = "Engineering"
+            title_lower = title.lower()
+            if "research" in title_lower or "scientist" in title_lower:
+                role_family = "Research"
+            elif "product" in title_lower:
+                role_family = "Product"
+            elif "market" in title_lower or "sale" in title_lower:
+                role_family = "Sales"
+            elif "design" in title_lower or "ux" in title_lower:
+                role_family = "Design"
+                
+            published_str = item.get("datePosted", "")
+            published_date = datetime.now(timezone.utc)
+            if published_str:
+                try:
+                    published_date = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
+                except ValueError:
+                    pass
+                    
+            return {
+                "recordType": "JOB",
+                "content": {
+                    "company": company_name,
+                    "date": published_date,
+                    "is_remote": is_remote,
+                    "role_family": role_family
                 }
             }
             

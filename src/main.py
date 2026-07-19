@@ -1,6 +1,14 @@
 import sys
 import time
 import asyncio
+
+if sys.platform.startswith("win"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 from src.config.config import settings
 from src.config.registry import SourceRegistry, SourceConfig
 from src.crawler.orchestrator import AsyncCrawler
@@ -661,15 +669,21 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
     if run_all:
         test_sources = enabled_sources
     else:
-        # Filter out one API source (arxiv) and one webpage source (github_trending_ai)
+        # Filter out key demo sources to execute sandbox run
         api_source = next((s for s in enabled_sources if s.name == "arxiv"), None)
         web_source = next((s for s in enabled_sources if s.name == "github_trending_ai"), None)
+        prod_api_source = next((s for s in enabled_sources if s.name == "github_products_api"), None)
+        prod_llm_source = next((s for s in enabled_sources if s.name == "github_products_api_llm"), None)
 
         if not api_source or not web_source:
             print("CRITICAL ERROR: Example sources 'arxiv' and 'github_trending_ai' must be defined in sources.yaml", file=sys.stderr)
             sys.exit(1)
 
         test_sources = [api_source, web_source]
+        if prod_api_source:
+            test_sources.append(prod_api_source)
+        if prod_llm_source:
+            test_sources.append(prod_llm_source)
 
     print("Fetching, Extracting, Validating & Resolving:")
     print("====================================")
@@ -703,38 +717,39 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
                 # Verify Strategy Selector on dynamic data
                 if source_cfg:
                     sel_strategy = StrategySelector.select_strategy(source_cfg, content)
-                    # Extract using Hybrid Engine if strategy supports it
+                    # Extract using either Hybrid Engine or LLM Processor
                     if sel_strategy != ExtractionStrategy.LLM:
                         extracted = HybridExtractionEngine.extract(source_name, content, sel_strategy)
                         print(f"  Hybrid Extractor -> Extracted {len(extracted)} records")
+                    else:
+                        processor = PipelineProcessor()
+                        extracted = await processor.process_content(source_name, source_cfg.category.value, normalized_content)
+                        print(f"  LLM Processor -> Extracted {len(extracted)} records")
                         
-                        # Validate and resolve extracted items
-                        source_info = SourceInfo(name=source_cfg.name, url=source_cfg.url)
-                        valid_entities = []
-                        delta_engine = KnowledgeDeltaEngine()
-                        for raw_entity in extracted:
-                            validated = EntityValidator.validate(raw_entity, source_info)
-                            if validated:
-                                valid_entities.append(validated)
+                    # Validate and resolve extracted items
+                    source_info = SourceInfo(name=source_cfg.name, url=source_cfg.url)
+                    valid_entities = []
+                    delta_engine = KnowledgeDeltaEngine()
+                    for raw_entity in extracted:
+                        validated = EntityValidator.validate(raw_entity, source_info)
+                        if validated:
+                            valid_entities.append(validated)
+                            
+                            # Run name through resolver to standardize
+                            if validated.recordType.value == "STARTUP":
+                                resolved_name, matched = resolver.resolve(validated.content.entityName)
+                                validated.content.entityName = resolved_name
+                                print(f"    Resolved entity name: '{resolved_name}' (Matched pre-seeded: {matched})")
+                            elif validated.recordType.value == "PRODUCT":
+                                resolved_name, matched = resolver.resolve(validated.content.startupName)
+                                validated.content.startupName = resolved_name
+                                print(f"    Resolved entity name: '{resolved_name}' (Matched pre-seeded: {matched})")
                                 
-                                # Run name through resolver to standardize
-                                if validated.recordType.value == "STARTUP":
-                                    resolved_name, matched = resolver.resolve(validated.content.entityName)
-                                    validated.content.entityName = resolved_name
-                                elif validated.recordType.value == "PRODUCT":
-                                    resolved_name, matched = resolver.resolve(validated.content.startupName)
-                                    validated.content.startupName = resolved_name
-                                else:
-                                    resolved_name = "N/A"
-                                    matched = False
-                                    
-                                if resolved_name != "N/A":
-                                    print(f"    Resolved entity name: '{resolved_name}' (Matched pre-seeded: {matched})")
-                                    # Process through Knowledge Delta Engine
-                                    delta_res = await delta_engine.process_entity_update(validated)
-                                    print(f"      Delta Engine -> Action: {delta_res.action} (Reason: {delta_res.reason})")
-                                    
-                        print(f"  Entity Validator -> Validated {len(valid_entities)}/{len(extracted)} entities successfully")
+                            # Process through Knowledge Delta Engine for ALL entities
+                            delta_res = await delta_engine.process_entity_update(validated)
+                            print(f"      Delta Engine -> Action: {delta_res.action} (Reason: {delta_res.reason})")
+                                
+                    print(f"  Entity Validator -> Validated {len(valid_entities)}/{len(extracted)} entities successfully")
                 
                 raw_size_kb = len(content.encode('utf-8')) / 1024
                 norm_size_kb = len(normalized_content.encode('utf-8')) / 1024
@@ -746,7 +761,10 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
                 
                 # Print sample text
                 sample = "\n".join(normalized_content.splitlines()[:4])
-                print(f"  Sample Cleaned Text:\n  ---\n  {sample}\n  ---")
+                try:
+                    print(f"  Sample Cleaned Text:\n  ---\n  {sample}\n  ---")
+                except UnicodeEncodeError:
+                    print(f"  Sample Cleaned Text:\n  ---\n  {sample.encode('ascii', errors='replace').decode('ascii')}\n  ---")
                 successful += 1
             else:
                 print("FAILED")

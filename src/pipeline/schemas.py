@@ -62,9 +62,7 @@ def sanitize_url(v: Any) -> Any:
 def sanitize_date(v: Any) -> Any:
     """Helper to normalize dates to timezone-aware UTC datetime."""
     if isinstance(v, str):
-        normalized = DateNormalizer.normalize(v)
-        if normalized:
-            return normalized
+        return DateNormalizer.normalize(v)
     elif isinstance(v, datetime):
         if v.tzinfo is None:
             return v.replace(tzinfo=timezone.utc)

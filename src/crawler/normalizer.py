@@ -32,9 +32,13 @@ class ContentNormalizer:
         for tag in soup(ignore_tags):
             tag.decompose()
 
-        # 2. Decompose container elements matching common ads/navigation/cookie banner selectors
+        # 2. Decompose container elements matching clearly non-content selectors.
+        # NOTE: Be conservative — overly broad patterns strip article listing grids on SPAs.
+        # Only match IDs/classes that are unambiguously non-content (cookie banners, ad slots,
+        # social share buttons). Avoid 'nav', 'menu', 'sidebar' as these appear inside
+        # article card wrappers on modern publishing sites (Wired, MIT Tech Review, etc.).
         boilerplate_patterns = re.compile(
-            r"cookie|consent|banner|menu|nav|footer|sidebar|ads|ad-box|social-share|navbar|head-bar",
+            r"^(cookie[-_]|consent[-_]|ad[-_]slot|ad[-_]box|social[-_]share|gdpr|paywall|subscription[-_]|popup)",
             re.IGNORECASE
         )
         for element in soup.find_all(attrs={"class": boilerplate_patterns}):

@@ -535,7 +535,12 @@ class KnowledgeDeltaEngine:
 
     async def _process_news(self, entity: Any, incoming_prec: int, incoming_fingerprint: str) -> DeltaResult:
         title = entity.content.title
-        existing = self.news_repo.find_one({"content.title": title})
+        existing = self.news_repo.find_one({
+            "$or": [
+                {"content.title": title},
+                {"content.url": entity.content.url}
+            ]
+        })
         
         if not existing:
             entity_dump = entity.model_dump()

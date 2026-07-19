@@ -43,6 +43,16 @@ class SourceConfig(BaseModel):
     crawl_frequency_hours: int = Field(..., gt=0)
     rate_limit_per_minute: int = Field(..., gt=0)
     retry_policy: RetryPolicy
+    
+    # Custom pagination configuration parameters
+    research_target_count: int | None = Field(None, ge=1)
+    batch_size: int | None = Field(None, ge=1)
+    max_results_per_request: int | None = Field(None, ge=1)
+
+    # Per-source Playwright configuration
+    # wait_until: domcontentloaded (default, fast) | load | networkidle (for SPAs)
+    playwright_wait: str = Field("domcontentloaded")
+    playwright_timeout_seconds: int = Field(30, gt=0)
 
     @field_validator("url")
     @classmethod

@@ -19,6 +19,10 @@ class Settings:
         self.GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
         self.GROQ_API_KEY: str | None = os.getenv("GROQ_API_KEY")
         self.DEEPSEEK_API_KEY: str | None = os.getenv("DEEPSEEK_API_KEY")
+        self.OPENROUTER_API_KEY: str | None = os.getenv("OPENROUTER_API_KEY")
+        self.OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
+        self.OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        self.OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "openrouter/free")
         # Model name is configuration-driven to avoid hardcoded deprecations.
         # Override in .env with GEMINI_MODEL=<model-name> as needed.
         self.GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")

@@ -31,11 +31,47 @@ class StrategySelector:
 
         # 3. Check for JSON-LD script block in content to dynamically bypass LLM and save tokens
         if "<script" in content and 'type="application/ld+json"' in content:
-            logger.info(
-                f"Strategy selected: {ExtractionStrategy.JSON_LD.value} (Dynamic Override: JSON-LD detected) | "
-                f"Source: {source.name} | Bypassing LLM to save tokens"
-            )
-            return ExtractionStrategy.JSON_LD
+            from bs4 import BeautifulSoup
+            import json
+            try:
+                soup = BeautifulSoup(content, "html.parser")
+                scripts = soup.find_all("script", type="application/ld+json")
+                has_target = False
+                target_types = {
+                    "JobPosting", "NewsArticle", "BlogPosting", 
+                    "ScholarlyArticle", "MedicalScholarlyArticle", 
+                    "Product", "SoftwareApplication"
+                }
+                
+                def has_target_type(item_val) -> bool:
+                    if isinstance(item_val, dict):
+                        t = item_val.get("@type")
+                        if t in target_types:
+                            return True
+                        if "@graph" in item_val:
+                            return any(has_target_type(x) for x in item_val["@graph"])
+                        return any(has_target_type(x) for x in item_val.values())
+                    elif isinstance(item_val, list):
+                        return any(has_target_type(x) for x in item_val)
+                    return False
+
+                for script in scripts:
+                    if script.string:
+                        try:
+                            data = json.loads(script.string.strip())
+                            if has_target_type(data):
+                                has_target = True
+                                break
+                        except Exception:
+                            pass
+                if has_target:
+                    logger.info(
+                        f"Strategy selected: {ExtractionStrategy.JSON_LD.value} (Dynamic Override: JSON-LD detected) | "
+                        f"Source: {source.name} | Bypassing LLM to save tokens"
+                    )
+                    return ExtractionStrategy.JSON_LD
+            except Exception:
+                pass
 
         # 4. Default to LLM extraction if semantic reasoning on unstructured content is required
         logger.info(f"Strategy selected: {ExtractionStrategy.LLM.value} (Requires semantic extraction) | Source: {source.name}")

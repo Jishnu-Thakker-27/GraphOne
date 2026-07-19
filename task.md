@@ -48,3 +48,11 @@
   - `[x]` Implement `src/utils/helpers.py` (Loguru JSON/human logging configuration)
   - `[x]` Create Architecture Decision Records (ADRs) under `docs/ADR/`
   - `[x]` Assemble pipeline orchestrator in `src/main.py`
+- `[x]` Phase 14: News & Jobs Ingestion Validation
+  - `[x]` Resolve character encoding crash on Windows console prints
+  - `[x]` Fix Playwright browser HTTP/2 protocol timeouts on job sources
+  - `[x]` Correct 404 news urls in sources.yaml configuration
+  - `[x]` Integrate LLM Extraction Processor into the main pipeline loop
+  - `[x]` Add JSON-LD JobPosting parsing schema structures
+  - `[x]` Fix LLM fallback response matching precedence checks
+  - `[x]` Export verified news and jobs CSV files alongside startups, products, and papers
