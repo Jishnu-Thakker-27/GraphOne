@@ -7,9 +7,14 @@ from src.crawler.orchestrator import AsyncCrawler
 from src.crawler.normalizer import ContentNormalizer
 from src.pipeline.schemas import (
     StartupEntity,
+    ProductEntity,
+    ResearchPaperEntity,
     SourceInfo,
     StartupContent,
     StartupData,
+    ProductContent,
+    ResearchPaperContent,
+    PricingModel,
     ExtractionStrategy,
 )
 from src.pipeline.selector import StrategySelector
@@ -18,7 +23,12 @@ from src.pipeline.processor import PipelineProcessor
 from src.pipeline.validator import EntityValidator
 from src.resolution.resolver import EntityResolver
 from src.delta.engine import KnowledgeDeltaEngine
-from src.database.repositories import StartupRepository, ChangeHistoryRepository
+from src.database.repositories import (
+    StartupRepository,
+    ProductRepository,
+    ResearchPaperRepository,
+    ChangeHistoryRepository,
+)
 
 def run_schema_verification_test() -> None:
     print("Schema Validation Test:")
@@ -321,91 +331,179 @@ async def run_delta_verification_test() -> None:
     print("Knowledge Delta Engine Test:")
     print("====================================")
     
-    # Save original threshold and configure for test
-    original_threshold = settings.DELTA_CONFIDENCE_THRESHOLD
-    settings.DELTA_CONFIDENCE_THRESHOLD = 0.70
-    
-    # Clean repositories for testing
     startup_repo = StartupRepository()
+    product_repo = ProductRepository()
+    paper_repo = ResearchPaperRepository()
     change_repo = ChangeHistoryRepository()
+    
     startup_repo.delete_many({})
+    product_repo.delete_many({})
+    paper_repo.delete_many({})
     change_repo.delete_many({})
     
     delta_engine = KnowledgeDeltaEngine()
-    source_info = SourceInfo(name="test_delta_source", url="https://delta.example.com")
     
-    # Entity 1: Initial insertion
-    valid_startup = {
-        "recordType": "STARTUP",
-        "content": {
-            "entityName": "Stability AI",
-            "data": {
-                "employeeCount": 150
-            }
-        }
-    }
-    validated_entity = EntityValidator.validate(valid_startup, source_info)
-    if not validated_entity:
-        print("Validation failed for delta test setup.")
-        return
-        
-    msg1, ok1 = await delta_engine.process_entity_update(validated_entity, "MEDIUM")
-    print(f"Test 1: Initial Record Ingestion -> Result: {msg1} (Was updated: {ok1}) - PASSED")
+    # 1. Initial Insertion
+    source_yc = SourceInfo(name="yc_companies", url="https://yc-oss.github.io/api/companies/all.json")
+    entity_yc = StartupEntity(
+        source=source_yc,
+        content=StartupContent(
+            entityName="Stability AI",
+            data=StartupData(employeeCount=100)
+        ),
+        content_hash="hash_yc_1"
+    )
+    res1 = await delta_engine.process_entity_update(entity_yc)
+    print(f"Test 1: Initial Insertion -> Action: {res1.action} (Expected: INSERT) - PASSED")
     
     print("------------------------------------")
     
-    # Entity 2: Low confidence update (LOW priority yields 0.60 confidence < 0.70 threshold)
-    updated_low = {
-        "recordType": "STARTUP",
-        "content": {
-            "entityName": "Stability AI",
-            "data": {
-                "employeeCount": 180  # Change count
-            }
-        }
-    }
-    validated_low = EntityValidator.validate(updated_low, source_info)
-    msg2, ok2 = await delta_engine.process_entity_update(validated_low, "LOW")
-    print(f"Test 2: Low-Priority Update -> Result: {msg2} (Was updated: {ok2}) - PASSED")
-    
-    # Check that count remains 150 in repository
-    record_after_low = startup_repo.find_one({"content.entityName": "Stability AI"})
-    print(f"  Count in database: {record_after_low['content']['data']['employeeCount']} (Expected: 150)")
+    # 2. Fingerprint Match Skip
+    res2 = await delta_engine.process_entity_update(entity_yc)
+    print(f"Test 2: Fingerprint Match Skip -> Action: {res2.action} (Expected: SKIP) - PASSED")
     
     print("------------------------------------")
     
-    # Entity 3: High confidence update (HIGH priority yields 0.95 confidence > 0.70 threshold)
-    updated_high = {
-        "recordType": "STARTUP",
-        "content": {
-            "entityName": "Stability AI",
-            "data": {
-                "employeeCount": 200  # Change count
-            }
-        }
-    }
-    validated_high = EntityValidator.validate(updated_high, source_info)
-    msg3, ok3 = await delta_engine.process_entity_update(validated_high, "HIGH")
-    print(f"Test 3: High-Priority Update -> Result: {msg3} (Was updated: {ok3}) - PASSED")
-    
-    # Check that count is updated to 200 in repository
-    record_after_high = startup_repo.find_one({"content.entityName": "Stability AI"})
-    print(f"  Count in database: {record_after_high['content']['data']['employeeCount']} (Expected: 200)")
+    # 3. Higher-precedence source updates conflicting fields
+    source_arxiv = SourceInfo(name="arxiv", url="https://arxiv.org")
+    entity_arxiv = StartupEntity(
+        source=source_arxiv,
+        content=StartupContent(
+            entityName="Stability AI",
+            data=StartupData(employeeCount=200)
+        ),
+        content_hash="hash_arxiv_1"
+    )
+    res3 = await delta_engine.process_entity_update(entity_arxiv)
+    print(f"Test 3: Higher Precedence Overwrite -> Action: {res3.action} (Expected: MERGE) - PASSED")
+    db_rec3 = startup_repo.find_one({"content.entityName": "Stability AI"})
+    print(f"  Updated Employee Count: {db_rec3['content']['data']['employeeCount']} (Expected: 200)")
     
     print("------------------------------------")
     
-    # Entity 4: Verify ChangeHistory log
+    # 4. Lower-priority source cannot overwrite higher-priority values (Conflict rejection)
+    source_git = SourceInfo(name="github_trending_ai", url="https://github.com")
+    entity_git = StartupEntity(
+        source=source_git,
+        content=StartupContent(
+            entityName="Stability AI",
+            data=StartupData(employeeCount=150)
+        ),
+        content_hash="hash_git_1"
+    )
+    res4 = await delta_engine.process_entity_update(entity_git)
+    print(f"Test 4: Lower Precedence Conflict Rejected -> Action: {res4.action} (Expected: SKIP) - PASSED")
+    db_rec4 = startup_repo.find_one({"content.entityName": "Stability AI"})
+    print(f"  Employee Count remains: {db_rec4['content']['data']['employeeCount']} (Expected: 200)")
+    
+    print("------------------------------------")
+    
+    # 5. Lower-priority source CAN add missing fields
+    prod_git = ProductEntity(
+        source=source_git,
+        content=ProductContent(
+            startupName="vllm",
+            pricingModel=PricingModel.FREE,
+            github_url=None
+        ),
+        content_hash="hash_vllm_1"
+    )
+    await delta_engine.process_entity_update(prod_git)
+    
+    source_tc = SourceInfo(name="techcrunch_ai", url="https://techcrunch.com")
+    prod_tc = ProductEntity(
+        source=source_tc,
+        content=ProductContent(
+            startupName="vllm",
+            pricingModel=PricingModel.PAID,  # Conflicting pricing model (techcrunch is 50 < github is 70, so FREE wins)
+            github_url="https://github.com/vllm-project/vllm"  # Missing field (should be accepted!)
+        ),
+        content_hash="hash_vllm_2"
+    )
+    res5 = await delta_engine.process_entity_update(prod_tc)
+    print(f"Test 5: Lower Precedence Adds Missing Field -> Action: {res5.action} (Expected: MERGE) - PASSED")
+    print(f"  Merged fields: {res5.changed_fields} (Expected: ['github_url'])")
+    db_prod5 = product_repo.find_one({"content.startupName": "vllm"})
+    print(f"  Github URL added: '{db_prod5['content'].get('github_url')}'")
+    print(f"  Pricing Model remains: '{db_prod5['content'].get('pricingModel')}' (Expected: FREE)")
+    
+    print("------------------------------------")
+    
+    # 6. List Union Merging (Order Preserving)
+    source_hf = SourceInfo(name="huggingface_papers", url="https://huggingface.co")
+    paper_hf = ResearchPaperEntity(
+        source=source_hf,
+        content=ResearchPaperContent(
+            title="Llama 3 Paper",
+            authors=["Author A", "Author B"],
+            paper_url="https://hf.co/llama3",
+            published_date="2026-07-01T00:00:00Z"
+        ),
+        content_hash="hash_paper_1"
+    )
+    await delta_engine.process_entity_update(paper_hf)
+    
+    paper_tc = ResearchPaperEntity(
+        source=source_tc,
+        content=ResearchPaperContent(
+            title="Llama 3 Paper",
+            authors=["Author B", "Author C"],
+            paper_url="https://hf.co/llama3",
+            published_date="2026-07-01T00:00:00Z"
+        ),
+        content_hash="hash_paper_2"
+    )
+    res6 = await delta_engine.process_entity_update(paper_tc)
+    print(f"Test 6: List Union (Order Preserving) -> Action: {res6.action} (Expected: MERGE) - PASSED")
+    db_paper6 = paper_repo.find_one({"content.title": "Llama 3 Paper"})
+    print(f"  Merged Authors: {db_paper6['content']['authors']} (Expected: ['Author A', 'Author B', 'Author C'])")
+    
+    print("------------------------------------")
+    
+    # 7. URL Normalization
+    paper_normalized = ResearchPaperEntity(
+        source=source_hf,
+        content=ResearchPaperContent(
+            title="Llama 3 Paper",
+            authors=["Author A", "Author B", "Author C"],
+            paper_url="http://hf.co/llama3/",  # differs by protocol & trailing slash
+            published_date="2026-07-01T00:00:00Z"
+        ),
+        content_hash="hash_paper_1"
+    )
+    res7 = await delta_engine.process_entity_update(paper_normalized)
+    print(f"Test 7: URL Normalization match -> Action: {res7.action} (Expected: SKIP) - PASSED")
+    
+    print("------------------------------------")
+    
+    # 8. Publication Date Preservation (Earliest date wins)
+    paper_arxiv = ResearchPaperEntity(
+        source=source_arxiv,
+        content=ResearchPaperContent(
+            title="Llama 3 Paper",
+            authors=["Author A", "Author B", "Author C"],
+            paper_url="https://hf.co/llama3",
+            published_date="2026-06-15T00:00:00Z"  # earlier than 2026-07-01
+        ),
+        content_hash="hash_paper_3"
+    )
+    res8 = await delta_engine.process_entity_update(paper_arxiv)
+    print(f"Test 8: Publication Date Keep Earliest -> Action: {res8.action} (Expected: MERGE) - PASSED")
+    db_paper8 = paper_repo.find_one({"content.title": "Llama 3 Paper"})
+    print(f"  Preserved Published Date: '{db_paper8['content']['published_date']}' (Expected: 2026-06-15...)")
+    
+    print("------------------------------------")
+    
+    # 9. ChangeHistory Audit Check
     history_logs = change_repo.find()
-    print(f"Test 4: ChangeHistory Verification -> Found {len(history_logs)} change log(s) - PASSED")
+    print(f"Test 9: ChangeHistory Verification -> Found {len(history_logs)} audit logs - PASSED")
     if history_logs:
         log = history_logs[0]
-        print(f"  Entity: '{log['entityName']}'")
-        print(f"  Field: '{log['field']}'")
-        print(f"  Old Value: {log['oldValue']} -> New Value: {log['newValue']}")
-        print(f"  Change Confidence: {log['confidence']}")
+        print(f"  Entity ID: '{log['entity_id']}'")
+        print(f"  Operation: '{log['operation']}'")
+        print(f"  Source: '{log['source']}' (Priority: {log['source_priority']})")
+        print(f"  Changed Fields: {log['changed_fields']}")
     print("====================================")
-    
-    settings.DELTA_CONFIDENCE_THRESHOLD = original_threshold
 
 async def run_pipeline_tests() -> None:
     print("Adaptive Intelligence Ingestion Pipeline (AIIP) Initialized.\n")

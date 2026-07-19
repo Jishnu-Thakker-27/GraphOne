@@ -103,6 +103,8 @@ class BaseEntity(BaseModel):
     collectedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     observedAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
+    entity_fingerprint: Optional[str] = None
+    content_hash: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -284,13 +286,18 @@ class NewsEntity(BaseEntity):
 # =========================================================================
 
 class ChangeHistory(BaseModel):
-    entityName: str = Field(..., min_length=1)
-    recordType: EntityRecordType
-    field: str = Field(..., min_length=1)
-    oldValue: Any
-    newValue: Any
-    confidence: float = Field(0.5, ge=0.0, le=1.0)
+    entity_id: str = Field(..., min_length=1)
+    entity_type: str = Field(..., min_length=1)
+    operation: str = Field(..., min_length=1)  # INSERT, UPDATE, MERGE, SKIP
+    changed_fields: list[str] = Field(default_factory=list)
+    old_values: dict[str, Any] = Field(default_factory=dict)
+    new_values: dict[str, Any] = Field(default_factory=dict)
+    source: str = Field(..., min_length=1)
+    source_priority: int
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    observed_at: datetime
+    updated_at: datetime
+    change_reason: str = Field(..., min_length=1)
 
 
 class EntityMapping(BaseModel):

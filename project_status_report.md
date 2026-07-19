@@ -161,12 +161,13 @@ graph TD
 ### 🔀 Phase 11 — Knowledge Delta Engine
 *   **Status**: Completed (Staged locally, ready to commit)
 *   **Key Files**:
-    *   [engine.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/delta/engine.py) — Knowledge delta engine router.
+    *   [engine.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/delta/engine.py) — Deterministic Knowledge Delta and Merge Engine.
 *   **Implemented Features**:
-    *   Comparison of raw parsed fields against existing MongoDB documents.
-    *   Integration of source priority confidence mapping (HIGH: 0.95, MEDIUM: 0.80, LOW: 0.60).
-    *   Conditional updates based on configurable threshold setting.
-    *   MongoDB operations for record updates and ChangeHistory log insertions.
+    *   Field-level comparison and merge logic separating insertion, updates, merges, and skips.
+    *   Integer source precedence routing loaded directly from `sources.yaml` configs.
+    *   SHA-256 stable Entity Fingerprinting to bypass redundant updates.
+    *   Order-preserving union list merging, URL normalization comparison, and earliest publication date preservation.
+    *   Restructured `ChangeHistory` model schema logging precise changed fields and audit details.
 
 ---
 
@@ -184,7 +185,7 @@ Test 1: Valid Startup Entity creation - PASSED
   Normalized Entity Name: 'OpenAI'
   Employee Count: 120
   Record Type: STARTUP
-  Scraped At: 2026-07-19 05:25:00.550553+00:00
+  Scraped At: 2026-07-19 05:46:47.350723+00:00
 ------------------------------------
 Test 2: Invalid URL - PASSED (gracefully rejected invalid URL)
   Rejection Details: 1 validation error for SourceInfo
@@ -241,7 +242,7 @@ Test 1: Valid Startup payload - PASSED
   Entity Name: 'Mistral AI'
   Employees: 80
   Record Type: STARTUP
-  Scraped At: 2026-07-19 05:25:03.665917+00:00
+  Scraped At: 2026-07-19 05:46:50.451148+00:00
 ------------------------------------
 Test 2: Invalid Startup payload - PASSED (gracefully rejected missing fields)
 ====================================
@@ -259,19 +260,34 @@ Test 4: Unrecognized 'Acme AI Corp' -> Resolved: 'Acme AI' (Matched: False) - PA
 
 Knowledge Delta Engine Test:
 ====================================
-Test 1: Initial Record Ingestion -> Result: Inserted new record (Was updated: True) - PASSED
+Test 1: Initial Insertion -> Action: INSERT (Expected: INSERT) - PASSED
 ------------------------------------
-Test 2: Low-Priority Update -> Result: Confidence below threshold (Was updated: False) - PASSED
-  Count in database: 150 (Expected: 150)
+Test 2: Fingerprint Match Skip -> Action: SKIP (Expected: SKIP) - PASSED
 ------------------------------------
-Test 3: High-Priority Update -> Result: Updated record fields (Was updated: True) - PASSED
-  Count in database: 200 (Expected: 200)
+Test 3: Higher Precedence Overwrite -> Action: MERGE (Expected: MERGE) - PASSED
+  Updated Employee Count: 200 (Expected: 200)
 ------------------------------------
-Test 4: ChangeHistory Verification -> Found 1 change log(s) - PASSED
-  Entity: 'Stability AI'
-  Field: 'employeeCount'
-  Old Value: 150 -> New Value: 200
-  Change Confidence: 0.95
+Test 4: Lower Precedence Conflict Rejected -> Action: SKIP (Expected: SKIP) - PASSED
+  Employee Count remains: 200 (Expected: 200)
+------------------------------------
+Test 5: Lower Precedence Adds Missing Field -> Action: MERGE (Expected: MERGE) - PASSED
+  Merged fields: ['github_url'] (Expected: ['github_url'])
+  Github URL added: 'https://github.com/vllm-project/vllm'
+  Pricing Model remains: 'PricingModel.FREE' (Expected: FREE)
+------------------------------------
+Test 6: List Union (Order Preserving) -> Action: MERGE (Expected: MERGE) - PASSED
+  Merged Authors: ['Author A', 'Author B', 'Author C'] (Expected: ['Author A', 'Author B', 'Author C'])
+------------------------------------
+Test 7: URL Normalization match -> Action: SKIP (Expected: SKIP) - PASSED
+------------------------------------
+Test 8: Publication Date Keep Earliest -> Action: MERGE (Expected: MERGE) - PASSED
+  Preserved Published Date: '2026-06-15 00:00:00+00:00' (Expected: 2026-06-15...)
+------------------------------------
+Test 9: ChangeHistory Verification -> Found 7 audit logs - PASSED
+  Entity ID: 'Stability AI'
+  Operation: 'INSERT'
+  Source: 'yc_companies' (Priority: 90)
+  Changed Fields: ['all']
 ====================================
 
 Loaded 15 sources
@@ -327,7 +343,7 @@ Crawl Summary
 Sources attempted : 2
 Successful        : 2
 Failed            : 0
-Total duration    : 7.93s
+Total duration    : 10.36s
 ```
 
 ---

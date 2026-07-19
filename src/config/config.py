@@ -32,9 +32,6 @@ class Settings:
         self.MAX_CONCURRENT_REQUESTS: int = int(os.getenv("MAX_CONCURRENT_REQUESTS", "10"))
         self.REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "30"))
 
-        # Knowledge Delta Threshold
-        self.DELTA_CONFIDENCE_THRESHOLD: float = float(os.getenv("DELTA_CONFIDENCE_THRESHOLD", "0.5"))
-
         # Sheets Integration
         self.GOOGLE_SHEETS_CREDENTIALS_PATH: str | None = os.getenv("GOOGLE_SHEETS_CREDENTIALS_PATH")
         self.GOOGLE_SHEET_ID: str | None = os.getenv("GOOGLE_SHEET_ID")
@@ -57,9 +54,6 @@ class Settings:
 
         if self.REQUEST_TIMEOUT <= 0:
             raise ValueError("REQUEST_TIMEOUT must be greater than 0.")
-
-        if not (0.0 <= self.DELTA_CONFIDENCE_THRESHOLD <= 1.0):
-            raise ValueError("DELTA_CONFIDENCE_THRESHOLD must be between 0.0 and 1.0.")
 
         return warnings
 

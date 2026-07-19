@@ -34,7 +34,12 @@
 - `[x]` Phase 10: Fuzzy Entity Resolution
   - `[x]` Implement `src/resolution/resolver.py` (RapidFuzz matching + pre-seeded list of 50 AI startups)
 - `[x]` Phase 11: Knowledge Delta Engine
-  - `[x]` Implement `src/delta/engine.py` (diff logic, ChangeHistory logs, and confidence checking)
+  - `[x]` Update sources.yaml with integer priority precedence levels
+  - `[x]` Support precedence field in registry.py SourceConfig schema
+  - `[x]` Add entity_fingerprint/content_hash to BaseEntity, restructure ChangeHistory in schemas.py
+  - `[x]` Remove DELTA_CONFIDENCE_THRESHOLD from config settings
+  - `[x]` Implement deterministic merge rules, fingerprint checking, and DeltaResult in engine.py
+  - `[x]` Rewrite verification tests in main.py to test precedence, merging, dates, list unions, and fingerprint skips
 - `[/]` Phase 12: CSV & Google Sheets Exporters
   - `[ ]` Implement `src/exporters/sheets.py` (write to local outputs directory + gspread Sheets sync)
 - `[ ]` Phase 13: Metrics, API, Logging & Final Integration

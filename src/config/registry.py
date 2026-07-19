@@ -38,6 +38,7 @@ class SourceConfig(BaseModel):
     supports_api: bool
     url: str
     priority: Priority
+    precedence: int = Field(50, ge=0, le=100)
     extraction_method: ExtractionMethod
     crawl_frequency_hours: int = Field(..., gt=0)
     rate_limit_per_minute: int = Field(..., gt=0)
