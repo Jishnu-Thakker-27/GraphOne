@@ -147,7 +147,7 @@ graph TD
 ---
 
 ### 🔍 Phase 10 — Fuzzy Entity Resolution
-*   **Status**: Completed (Staged locally, ready to commit)
+*   **Status**: Completed & Pushed (Commit `ca65052`)
 *   **Key Files**:
     *   [resolver.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/resolution/resolver.py) — Fuzzy resolver using string similarity.
 *   **Implemented Features**:
@@ -155,6 +155,18 @@ graph TD
     *   RapidFuzz token sort ratio string matching.
     *   Pre-seeded match list of 50 prominent AI companies.
     *   Dynamic caching and registry addition for unresolved names.
+
+---
+
+### 🔀 Phase 11 — Knowledge Delta Engine
+*   **Status**: Completed (Staged locally, ready to commit)
+*   **Key Files**:
+    *   [engine.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/delta/engine.py) — Knowledge delta engine router.
+*   **Implemented Features**:
+    *   Comparison of raw parsed fields against existing MongoDB documents.
+    *   Integration of source priority confidence mapping (HIGH: 0.95, MEDIUM: 0.80, LOW: 0.60).
+    *   Conditional updates based on configurable threshold setting.
+    *   MongoDB operations for record updates and ChangeHistory log insertions.
 
 ---
 
@@ -172,7 +184,7 @@ Test 1: Valid Startup Entity creation - PASSED
   Normalized Entity Name: 'OpenAI'
   Employee Count: 120
   Record Type: STARTUP
-  Scraped At: 2026-07-18 11:50:50.912954
+  Scraped At: 2026-07-19 05:25:00.550553+00:00
 ------------------------------------
 Test 2: Invalid URL - PASSED (gracefully rejected invalid URL)
   Rejection Details: 1 validation error for SourceInfo
@@ -215,21 +227,99 @@ Test 3: RULE_BASED (GitHub Trending) -> Extracted 1 product(s) - PASSED
   Pricing Model: FREE
 ====================================
 
-Loaded 5 sources
+Multi-LLM Orchestrator Test:
+====================================
+Test 1: LLM Orchestration -> Extracted 1 entity/entities - PASSED
+  Record Type: STARTUP
+  Name: 'Mock Cohere'
+  Employees: 250
+====================================
 
-Fetching & Normalizing:
+Schema Validator Test:
+====================================
+Test 1: Valid Startup payload - PASSED
+  Entity Name: 'Mistral AI'
+  Employees: 80
+  Record Type: STARTUP
+  Scraped At: 2026-07-19 05:25:03.665917+00:00
+------------------------------------
+Test 2: Invalid Startup payload - PASSED (gracefully rejected missing fields)
+====================================
+
+Fuzzy Entity Resolution Test:
+====================================
+Test 1: Exact lowercase 'openai' -> Resolved: 'OpenAI' (Matched: True) - PASSED
+------------------------------------
+Test 2: Corporate suffix 'Anthropic, Inc.' -> Resolved: 'Anthropic' (Matched: True) - PASSED
+------------------------------------
+Test 3: Close spelling 'HuggingFace' -> Resolved: 'HuggingFace' (Matched: False) - PASSED
+------------------------------------
+Test 4: Unrecognized 'Acme AI Corp' -> Resolved: 'Acme AI' (Matched: False) - PASSED
+====================================
+
+Knowledge Delta Engine Test:
+====================================
+Test 1: Initial Record Ingestion -> Result: Inserted new record (Was updated: True) - PASSED
+------------------------------------
+Test 2: Low-Priority Update -> Result: Confidence below threshold (Was updated: False) - PASSED
+  Count in database: 150 (Expected: 150)
+------------------------------------
+Test 3: High-Priority Update -> Result: Updated record fields (Was updated: True) - PASSED
+  Count in database: 200 (Expected: 200)
+------------------------------------
+Test 4: ChangeHistory Verification -> Found 1 change log(s) - PASSED
+  Entity: 'Stability AI'
+  Field: 'employeeCount'
+  Old Value: 150 -> New Value: 200
+  Change Confidence: 0.95
+====================================
+
+Loaded 15 sources
+
+Fetching, Extracting, Validating & Resolving:
 ====================================
 [API] arxiv
   Hybrid Extractor -> Extracted 0 records
+  Entity Validator -> Validated 0/0 entities successfully
 SUCCESS
   Raw Payload Size: 2.3 KB
   Normalized Size : 2.3 KB (Reduced by 0.0%)
+  Sample Cleaned Text:
+  ---
+  <?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/Z8QUhPBXYJI4sdIrh8SwcHo8/dY</id>
+  <title>arXiv Query: search_query=all:ai&amp;id_list=&amp;start=0&amp;max_results=1</title>
+  ---
 ------------------------------------
 [PLAYWRIGHT] github_trending_ai
   Hybrid Extractor -> Extracted 15 records
+    Resolved entity name: 'lingbot-map' (Matched pre-seeded: False)
+    Resolved entity name: 'ossie' (Matched pre-seeded: False)
+    Resolved entity name: 'posthog' (Matched pre-seeded: False)
+    Resolved entity name: 'ai-engineering-from-scratch' (Matched pre-seeded: False)
+    Resolved entity name: 'code-review-graph' (Matched pre-seeded: False)
+    Resolved entity name: 'kimi-cli' (Matched pre-seeded: False)
+    Resolved entity name: 'agent-toolkit-for-aws' (Matched pre-seeded: False)
+    Resolved entity name: 'cupp' (Matched pre-seeded: False)
+    Resolved entity name: 'fastapi' (Matched pre-seeded: False)
+    Resolved entity name: 'skills' (Matched pre-seeded: False)
+    Resolved entity name: 'SenseNova-U1' (Matched pre-seeded: False)
+    Resolved entity name: 'gs-quant' (Matched pre-seeded: False)
+    Resolved entity name: 'agentscope' (Matched pre-seeded: False)
+    Resolved entity name: 'DeepTutor' (Matched pre-seeded: False)
+    Resolved entity name: 'hello-agents' (Matched pre-seeded: False)
+  Entity Validator -> Validated 15/15 entities successfully
 SUCCESS
   Raw Payload Size: 612.3 KB
   Normalized Size : 2.9 KB (Reduced by 99.5%)
+  Sample Cleaned Text:
+  ---
+  Skip to content
+You signed in with another tab or window.
+Reload
+to refresh your session.
+  ---
 ====================================
 
 Crawl Summary
@@ -237,43 +327,12 @@ Crawl Summary
 Sources attempted : 2
 Successful        : 2
 Failed            : 0
-Total duration    : 7.86s
+Total duration    : 7.93s
 ```
 
 ---
 
 ## 📋 Remaining Phases (Roadmap)
-
-### 🤖 Phase 8 — Multi-LLM Orchestrator
-*   **Objective**: Standardize text query resolution to AI extraction structures with models.
-*   **Planned Files**: `src/llm/client.py`, `src/pipeline/processor.py`
-*   **Features**:
-    *   Jittered multi-tier fallback (Gemini API -> Groq API -> DeepSeek API).
-    *   System context prompts and instructions.
-    *   Token constraint analysis.
-    *   LLM cache interface matching SHA-256 hashes of crawled content.
-
-### 🧪 Phase 9 — Schema Validator
-*   **Objective**: Ensure that data extracted via the LLM conforms to Pydantic pipeline definitions before resolving updates.
-*   **Planned Files**: `src/pipeline/validator.py`
-*   **Features**:
-    *   Pydantic parsing integration.
-    *   Discarding/logging invalid fields or missing required items.
-
-### 🔍 Phase 10 — Fuzzy Entity Resolution
-*   **Objective**: Avoid duplicate entries for entities (e.g. resolve "Ai Signal", "ai signal", and "AI Signal Corp" to "AI Signal").
-*   **Planned Files**: `src/resolution/resolver.py`
-*   **Features**:
-    *   String distance algorithms (e.g. `RapidFuzz` token set ratio).
-    *   Pre-seeded matching registry of 50 prominent AI startups.
-
-### 📊 Phase 11 — Knowledge Delta Engine
-*   **Objective**: Track confidence deltas and create historical changes logs inside the database.
-*   **Planned Files**: `src/delta/engine.py`
-*   **Features**:
-    *   Compare new extracted records with old values.
-    *   Delta calculation matching settings.
-    *   Log changes to `ChangeHistory` collection.
 
 ### 📁 Phase 12 — CSV & Google Sheets Exporters
 *   **Objective**: Synchronize collection dumps to easily readable spreadsheets.

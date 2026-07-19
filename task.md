@@ -33,9 +33,9 @@
   - `[x]` Implement `src/pipeline/validator.py` using Pydantic schemas
 - `[x]` Phase 10: Fuzzy Entity Resolution
   - `[x]` Implement `src/resolution/resolver.py` (RapidFuzz matching + pre-seeded list of 50 AI startups)
-- `[/]` Phase 11: Knowledge Delta Engine
-  - `[ ]` Implement `src/delta/engine.py` (diff logic, ChangeHistory logs, and confidence checking)
-- `[ ]` Phase 12: CSV & Google Sheets Exporters
+- `[x]` Phase 11: Knowledge Delta Engine
+  - `[x]` Implement `src/delta/engine.py` (diff logic, ChangeHistory logs, and confidence checking)
+- `[/]` Phase 12: CSV & Google Sheets Exporters
   - `[ ]` Implement `src/exporters/sheets.py` (write to local outputs directory + gspread Sheets sync)
 - `[ ]` Phase 13: Metrics, API, Logging & Final Integration
   - `[ ]` Implement `src/metrics/collector.py` (operational run counts)

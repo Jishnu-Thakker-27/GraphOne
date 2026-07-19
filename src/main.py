@@ -17,6 +17,8 @@ from src.pipeline.extractor import HybridExtractionEngine
 from src.pipeline.processor import PipelineProcessor
 from src.pipeline.validator import EntityValidator
 from src.resolution.resolver import EntityResolver
+from src.delta.engine import KnowledgeDeltaEngine
+from src.database.repositories import StartupRepository, ChangeHistoryRepository
 
 def run_schema_verification_test() -> None:
     print("Schema Validation Test:")
@@ -315,6 +317,96 @@ def run_resolver_verification_test() -> None:
     
     print("====================================")
 
+async def run_delta_verification_test() -> None:
+    print("Knowledge Delta Engine Test:")
+    print("====================================")
+    
+    # Save original threshold and configure for test
+    original_threshold = settings.DELTA_CONFIDENCE_THRESHOLD
+    settings.DELTA_CONFIDENCE_THRESHOLD = 0.70
+    
+    # Clean repositories for testing
+    startup_repo = StartupRepository()
+    change_repo = ChangeHistoryRepository()
+    startup_repo.delete_many({})
+    change_repo.delete_many({})
+    
+    delta_engine = KnowledgeDeltaEngine()
+    source_info = SourceInfo(name="test_delta_source", url="https://delta.example.com")
+    
+    # Entity 1: Initial insertion
+    valid_startup = {
+        "recordType": "STARTUP",
+        "content": {
+            "entityName": "Stability AI",
+            "data": {
+                "employeeCount": 150
+            }
+        }
+    }
+    validated_entity = EntityValidator.validate(valid_startup, source_info)
+    if not validated_entity:
+        print("Validation failed for delta test setup.")
+        return
+        
+    msg1, ok1 = await delta_engine.process_entity_update(validated_entity, "MEDIUM")
+    print(f"Test 1: Initial Record Ingestion -> Result: {msg1} (Was updated: {ok1}) - PASSED")
+    
+    print("------------------------------------")
+    
+    # Entity 2: Low confidence update (LOW priority yields 0.60 confidence < 0.70 threshold)
+    updated_low = {
+        "recordType": "STARTUP",
+        "content": {
+            "entityName": "Stability AI",
+            "data": {
+                "employeeCount": 180  # Change count
+            }
+        }
+    }
+    validated_low = EntityValidator.validate(updated_low, source_info)
+    msg2, ok2 = await delta_engine.process_entity_update(validated_low, "LOW")
+    print(f"Test 2: Low-Priority Update -> Result: {msg2} (Was updated: {ok2}) - PASSED")
+    
+    # Check that count remains 150 in repository
+    record_after_low = startup_repo.find_one({"content.entityName": "Stability AI"})
+    print(f"  Count in database: {record_after_low['content']['data']['employeeCount']} (Expected: 150)")
+    
+    print("------------------------------------")
+    
+    # Entity 3: High confidence update (HIGH priority yields 0.95 confidence > 0.70 threshold)
+    updated_high = {
+        "recordType": "STARTUP",
+        "content": {
+            "entityName": "Stability AI",
+            "data": {
+                "employeeCount": 200  # Change count
+            }
+        }
+    }
+    validated_high = EntityValidator.validate(updated_high, source_info)
+    msg3, ok3 = await delta_engine.process_entity_update(validated_high, "HIGH")
+    print(f"Test 3: High-Priority Update -> Result: {msg3} (Was updated: {ok3}) - PASSED")
+    
+    # Check that count is updated to 200 in repository
+    record_after_high = startup_repo.find_one({"content.entityName": "Stability AI"})
+    print(f"  Count in database: {record_after_high['content']['data']['employeeCount']} (Expected: 200)")
+    
+    print("------------------------------------")
+    
+    # Entity 4: Verify ChangeHistory log
+    history_logs = change_repo.find()
+    print(f"Test 4: ChangeHistory Verification -> Found {len(history_logs)} change log(s) - PASSED")
+    if history_logs:
+        log = history_logs[0]
+        print(f"  Entity: '{log['entityName']}'")
+        print(f"  Field: '{log['field']}'")
+        print(f"  Old Value: {log['oldValue']} -> New Value: {log['newValue']}")
+        print(f"  Change Confidence: {log['confidence']}")
+    print("====================================")
+    
+    settings.DELTA_CONFIDENCE_THRESHOLD = original_threshold
+
 async def run_pipeline_tests() -> None:
     print("Adaptive Intelligence Ingestion Pipeline (AIIP) Initialized.\n")
 
@@ -351,7 +443,11 @@ async def run_pipeline_tests() -> None:
     run_resolver_verification_test()
     print()
 
-    # 8. Load registry sources
+    # 8. Run Knowledge Delta Engine Verification
+    await run_delta_verification_test()
+    print()
+
+    # 9. Load registry sources
     try:
         registry = SourceRegistry()
         enabled_sources = registry.load()
