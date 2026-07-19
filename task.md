@@ -56,3 +56,12 @@
   - `[x]` Add JSON-LD JobPosting parsing schema structures
   - `[x]` Fix LLM fallback response matching precedence checks
   - `[x]` Export verified news and jobs CSV files alongside startups, products, and papers
+- `[x]` Phase 15: Optimizations & LLM Audit
+  - `[x]` Verify multi-LLM configuration and credentials
+  - `[x]` Enable custom Playwright wait strategies per source
+  - `[x]` Relax normalizer regex boilerplate constraints to preserve SPA grids
+  - `[x]` Implement chunking in PipelineProcessor to stay under token limits
+  - `[x]` Update Job and News schemas to make missing dates/URLs optional
+  - `[x]` Require slug-based URL fallbacks in News prompt to avoid validation errors
+  - `[x]` Fix news repository lookup query key mismatch in delta engine
+  - `[x]` Push all code modifications to GitHub repository
