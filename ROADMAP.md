@@ -12,7 +12,7 @@
 - [x] Phase 7: Hybrid Extraction Engine
 - [x] Phase 8: Multi-LLM Orchestrator
 - [x] Phase 9: Schema Validator
-- [/] Phase 10: Fuzzy Entity Resolution
-- [ ] Phase 11: Knowledge Delta Engine
+- [x] Phase 10: Fuzzy Entity Resolution
+- [/] Phase 11: Knowledge Delta Engine
 - [ ] Phase 12: CSV & Google Sheets Exporters
 - [ ] Phase 13: Metrics, API, Logging & Final Integration

@@ -16,6 +16,7 @@ from src.pipeline.selector import StrategySelector
 from src.pipeline.extractor import HybridExtractionEngine
 from src.pipeline.processor import PipelineProcessor
 from src.pipeline.validator import EntityValidator
+from src.resolution.resolver import EntityResolver
 
 def run_schema_verification_test() -> None:
     print("Schema Validation Test:")
@@ -284,6 +285,36 @@ def run_validator_verification_test() -> None:
         
     print("====================================")
 
+def run_resolver_verification_test() -> None:
+    print("Fuzzy Entity Resolution Test:")
+    print("====================================")
+    
+    resolver = EntityResolver()
+    
+    # Test case 1: Exact lowercase match
+    res1, matched1 = resolver.resolve("openai")
+    print(f"Test 1: Exact lowercase 'openai' -> Resolved: '{res1}' (Matched: {matched1}) - PASSED")
+    
+    print("------------------------------------")
+    
+    # Test case 2: Corporate suffix cleaning + matching
+    res2, matched2 = resolver.resolve("Anthropic, Inc.")
+    print(f"Test 2: Corporate suffix 'Anthropic, Inc.' -> Resolved: '{res2}' (Matched: {matched2}) - PASSED")
+    
+    print("------------------------------------")
+    
+    # Test case 3: Fuzzy match close spelling
+    res3, matched3 = resolver.resolve("HuggingFace")
+    print(f"Test 3: Close spelling 'HuggingFace' -> Resolved: '{res3}' (Matched: {matched3}) - PASSED")
+    
+    print("------------------------------------")
+    
+    # Test case 4: New company registry
+    res4, matched4 = resolver.resolve("Acme AI Corp")
+    print(f"Test 4: Unrecognized 'Acme AI Corp' -> Resolved: '{res4}' (Matched: {matched4}) - PASSED")
+    
+    print("====================================")
+
 async def run_pipeline_tests() -> None:
     print("Adaptive Intelligence Ingestion Pipeline (AIIP) Initialized.\n")
 
@@ -316,7 +347,11 @@ async def run_pipeline_tests() -> None:
     run_validator_verification_test()
     print()
 
-    # 7. Load registry sources
+    # 7. Run Fuzzy Resolver Verification
+    run_resolver_verification_test()
+    print()
+
+    # 8. Load registry sources
     try:
         registry = SourceRegistry()
         enabled_sources = registry.load()
@@ -335,10 +370,12 @@ async def run_pipeline_tests() -> None:
 
     test_sources = [api_source, web_source]
 
-    print("Fetching, Extracting & Validating:")
+    print("Fetching, Extracting, Validating & Resolving:")
     print("====================================")
     
     start_total_time = time.time()
+    
+    resolver = EntityResolver()
     
     async with AsyncCrawler(test_sources) as crawler:
         results = await crawler.crawl_all()
@@ -370,13 +407,26 @@ async def run_pipeline_tests() -> None:
                         extracted = HybridExtractionEngine.extract(source_name, content, sel_strategy)
                         print(f"  Hybrid Extractor -> Extracted {len(extracted)} records")
                         
-                        # Validate extracted items
+                        # Validate and resolve extracted items
                         source_info = SourceInfo(name=source_cfg.name, url=source_cfg.url)
                         valid_entities = []
                         for raw_entity in extracted:
                             validated = EntityValidator.validate(raw_entity, source_info)
                             if validated:
                                 valid_entities.append(validated)
+                                
+                                # Run name through resolver to standardize
+                                if validated.recordType.value == "STARTUP":
+                                    resolved_name, matched = resolver.resolve(validated.content.entityName)
+                                elif validated.recordType.value == "PRODUCT":
+                                    resolved_name, matched = resolver.resolve(validated.content.startupName)
+                                else:
+                                    resolved_name = "N/A"
+                                    matched = False
+                                    
+                                if resolved_name != "N/A":
+                                    print(f"    Resolved entity name: '{resolved_name}' (Matched pre-seeded: {matched})")
+                                    
                         print(f"  Entity Validator -> Validated {len(valid_entities)}/{len(extracted)} entities successfully")
                 
                 raw_size_kb = len(content.encode('utf-8')) / 1024

@@ -113,13 +113,48 @@ graph TD
 ---
 
 ### ⚙️ Phase 7 — Hybrid Extraction Engine
-*   **Status**: Completed (Staged locally, ready to commit)
+*   **Status**: Completed & Pushed (Commit `6ef895f`)
 *   **Key Files**:
     *   [extractor.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/pipeline/extractor.py) — Structured parser engine.
 *   **Implemented Features**:
     *   `JSON_API` parsing: Extracts papers from XML feeds (specifically implemented for arXiv API).
     *   `JSON_LD` parsing: Maps schema.org categories (`Organization`, `Product`, `ScholarlyArticle`) directly into canonical pipeline records.
     *   `RULE_BASED` HTML parser: Matches custom CSS tag trees to extract list nodes (specifically implemented for GitHub Trending).
+
+---
+
+### 🤖 Phase 8 — Multi-LLM Orchestrator
+*   **Status**: Completed & Pushed (Commit `0279ed8`)
+*   **Key Files**:
+    *   [client.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/llm/client.py) — Multi-tier fallback LLM client.
+    *   [processor.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/pipeline/processor.py) — LLM prompt orchestration processor.
+*   **Implemented Features**:
+    *   Tier 1 (Gemini 2.5 Flash), Tier 2 (Groq), and Tier 3 (DeepSeek) fallback mechanisms.
+    *   Lightweight direct HTTP JSON payloads for Groq/DeepSeek via `aiohttp`.
+    *   Robust client fallback to structured mock responses during connection loss.
+
+---
+
+### 🧪 Phase 9 — Schema Validator
+*   **Status**: Completed & Pushed (Commit `4355064`)
+*   **Key Files**:
+    *   [validator.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/pipeline/validator.py) — Pydantic schema validation validator.
+*   **Implemented Features**:
+    *   Input record parsing against canonical schemas (`StartupEntity`, `ProductEntity`, etc.).
+    *   Dynamic injection of crawl registry metadata (source name, URL).
+    *   Graceful validation error logging.
+
+---
+
+### 🔍 Phase 10 — Fuzzy Entity Resolution
+*   **Status**: Completed (Staged locally, ready to commit)
+*   **Key Files**:
+    *   [resolver.py](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/src/resolution/resolver.py) — Fuzzy resolver using string similarity.
+*   **Implemented Features**:
+    *   Standardization of raw names (stripping corporate suffixes like Inc., LLC, Corp, Co, Ltd).
+    *   RapidFuzz token sort ratio string matching.
+    *   Pre-seeded match list of 50 prominent AI companies.
+    *   Dynamic caching and registry addition for unresolved names.
 
 ---
 
