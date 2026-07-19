@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: aiip-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.api.app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: MONGODB_URI
+        sync: false
+        placeholder: "Enter your MongoDB connection string (e.g. MongoDB Atlas)"
+      - key: GEMINI_API_KEY
+        sync: false
+        placeholder: "Enter your Gemini API Key"
+      - key: GROQ_API_KEY
+        sync: false
+        placeholder: "Enter your Groq API Key (Optional)"
+      - key: OPENROUTER_API_KEY
+        sync: false
+        placeholder: "Enter your OpenRouter API Key (Optional)"
+      - key: OPENROUTER_BASE_URL
+        value: "https://openrouter.ai/api/v1"

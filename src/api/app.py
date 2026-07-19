@@ -6,6 +6,7 @@ Exposes metrics and health check endpoints.
 
 from datetime import datetime, timezone
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 from src.metrics.collector import metrics_collector
 from src.database.repositories import ChangeHistoryRepository
 
@@ -14,6 +15,26 @@ app = FastAPI(
     description="Programmatically exposes pipeline operational run-time metrics.",
     version="1.0"
 )
+
+# CORS Configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+def read_root():
+    """Root endpoint welcoming users and directing them to OpenAPI documentation."""
+    return {
+        "message": "Welcome to the Adaptive Intelligence Ingestion Pipeline (AIIP) API!",
+        "docs_url": "/docs",
+        "health_url": "/health",
+        "metrics_url": "/metrics",
+        "status": "online"
+    }
 
 @app.get("/metrics")
 def get_metrics():
