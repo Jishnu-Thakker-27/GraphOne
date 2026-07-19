@@ -29,9 +29,9 @@
 - `[x]` Phase 8: Multi-LLM Orchestrator
   - `[x]` Implement `src/llm/client.py` with multi-tier fallback (Gemini -> Groq -> DeepSeek) and caching
   - `[x]` Implement `src/pipeline/processor.py` for LLM prompt orchestration
-- `[/]` Phase 9: Schema Validator
-  - `[ ]` Implement `src/pipeline/validator.py` using Pydantic schemas
-- `[ ]` Phase 10: Fuzzy Entity Resolution
+- `[x]` Phase 9: Schema Validator
+  - `[x]` Implement `src/pipeline/validator.py` using Pydantic schemas
+- `[/]` Phase 10: Fuzzy Entity Resolution
   - `[ ]` Implement `src/resolution/resolver.py` (RapidFuzz matching + pre-seeded list of 50 AI startups)
 - `[ ]` Phase 11: Knowledge Delta Engine
   - `[ ]` Implement `src/delta/engine.py` (diff logic, ChangeHistory logs, and confidence checking)

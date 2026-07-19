@@ -15,6 +15,7 @@ from src.pipeline.schemas import (
 from src.pipeline.selector import StrategySelector
 from src.pipeline.extractor import HybridExtractionEngine
 from src.pipeline.processor import PipelineProcessor
+from src.pipeline.validator import EntityValidator
 
 def run_schema_verification_test() -> None:
     print("Schema Validation Test:")
@@ -238,6 +239,51 @@ async def run_processor_verification_test() -> None:
         print(f"  Employees: {startup['data']['employeeCount']}")
     print("====================================")
 
+def run_validator_verification_test() -> None:
+    print("Schema Validator Test:")
+    print("====================================")
+    
+    source_info = SourceInfo(name="test_validator_source", url="https://validator.example.com")
+    
+    # Test case 1: Valid Startup Payload
+    valid_startup = {
+        "recordType": "STARTUP",
+        "content": {
+            "entityName": "Mistral AI",
+            "data": {
+                "employeeCount": 80
+            }
+        }
+    }
+    validated_startup = EntityValidator.validate(valid_startup, source_info)
+    if validated_startup:
+        print("Test 1: Valid Startup payload - PASSED")
+        print(f"  Entity Name: '{validated_startup.content.entityName}'")
+        print(f"  Employees: {validated_startup.content.data.employeeCount}")
+        print(f"  Record Type: {validated_startup.recordType.value}")
+        print(f"  Scraped At: {validated_startup.collectedAt}")
+    else:
+        print("Test 1: Valid Startup payload - FAILED")
+        
+    print("------------------------------------")
+    
+    # Test case 2: Invalid Startup Payload (missing entityName)
+    invalid_startup = {
+        "recordType": "STARTUP",
+        "content": {
+            "data": {
+                "employeeCount": 80
+            }
+        }
+    }
+    validated_invalid = EntityValidator.validate(invalid_startup, source_info)
+    if validated_invalid is None:
+        print("Test 2: Invalid Startup payload - PASSED (gracefully rejected missing fields)")
+    else:
+        print("Test 2: Invalid Startup payload - FAILED (expected rejection but passed)")
+        
+    print("====================================")
+
 async def run_pipeline_tests() -> None:
     print("Adaptive Intelligence Ingestion Pipeline (AIIP) Initialized.\n")
 
@@ -266,7 +312,11 @@ async def run_pipeline_tests() -> None:
     await run_processor_verification_test()
     print()
 
-    # 6. Load registry sources
+    # 6. Run Schema Validator Verification
+    run_validator_verification_test()
+    print()
+
+    # 7. Load registry sources
     try:
         registry = SourceRegistry()
         enabled_sources = registry.load()
@@ -285,7 +335,7 @@ async def run_pipeline_tests() -> None:
 
     test_sources = [api_source, web_source]
 
-    print("Fetching & Normalizing:")
+    print("Fetching, Extracting & Validating:")
     print("====================================")
     
     start_total_time = time.time()
@@ -319,6 +369,15 @@ async def run_pipeline_tests() -> None:
                     if sel_strategy != ExtractionStrategy.LLM:
                         extracted = HybridExtractionEngine.extract(source_name, content, sel_strategy)
                         print(f"  Hybrid Extractor -> Extracted {len(extracted)} records")
+                        
+                        # Validate extracted items
+                        source_info = SourceInfo(name=source_cfg.name, url=source_cfg.url)
+                        valid_entities = []
+                        for raw_entity in extracted:
+                            validated = EntityValidator.validate(raw_entity, source_info)
+                            if validated:
+                                valid_entities.append(validated)
+                        print(f"  Entity Validator -> Validated {len(valid_entities)}/{len(extracted)} entities successfully")
                 
                 raw_size_kb = len(content.encode('utf-8')) / 1024
                 norm_size_kb = len(normalized_content.encode('utf-8')) / 1024
