@@ -35,12 +35,12 @@ The pipeline successfully executed a full end-to-end extraction run yielding the
 
 | Dataset | Records | Target | Status |
 |:---|---:|:---:|:---:|
-| **Startups** | **5,753** | 1000+ | ✅ Achieved |
-| **Products** | **1,080** | 1000+ | ✅ Achieved |
-| **Research Papers** | **1,100** | 1000+ | ✅ Achieved |
-| **News** | **165** | 50+ | ✅ Achieved |
-| **Jobs** | **48** | 50+ | ✅ Achieved |
-| **Entity Mappings** | **7,085** | N/A (Generated During Entity Resolution) | ✅ Achieved |
+| **Startups** | **5,754** | 1000+ | ✅ Achieved |
+| **Products** | **1,103** | 1000+ | ✅ Achieved |
+| **Research Papers** | **1,097** | 1000+ | ✅ Achieved |
+| **News** | **176** | 50+ | ✅ Achieved |
+| **Jobs** | **149** | 50+ | ✅ Achieved |
+| **Entity Mappings** | **7,122** | N/A (Generated During Entity Resolution) | ✅ Achieved |
 
 ---
 
@@ -48,11 +48,11 @@ The pipeline successfully executed a full end-to-end extraction run yielding the
 
 | Requirement | Status | Description |
 |:---|:---:|:---|
-| **1000+ Startups** | ✅ Achieved | 5,755 startups ingested from YC Companies API |
-| **1000+ Products** | ✅ Achieved | 1,080 products/repos ingested from GitHub API and Trending |
-| **1000+ Research Papers** | ✅ Achieved | 1,100 papers ingested from arXiv queries |
-| **AI News Monitoring** | ✅ Achieved | 165 articles ingested from TechCrunch, ZDNet, Wired, VB, HF, and Google |
-| **AI Job Monitoring** | ✅ Achieved | 48 jobs ingested from YC Jobs, WWR, and AIJobsBoard |
+| **1000+ Startups** | ✅ Achieved | 5,754 startups ingested from YC Companies API |
+| **1000+ Products** | ✅ Achieved | 1,103 products/repos ingested from GitHub API and Trending |
+| **1000+ Research Papers** | ✅ Achieved | 1,097 papers ingested from arXiv queries |
+| **AI News Monitoring** | ✅ Achieved | 176 articles ingested from TechCrunch, ZDNet, Wired, VB, HF, and Google |
+| **AI Job Monitoring** | ✅ Achieved | 149 jobs ingested from YC Jobs, RemoteOK, WWR, and AIJobsBoard |
 | **Entity Resolution** | ✅ Achieved | RapidFuzz fuzzy name normalization with pre-seeded startups |
 | **Knowledge Delta Engine**| ✅ Achieved | Deterministic merges, priority precedence, and ChangeHistory logs |
 | **MongoDB Storage** | ✅ Achieved | MongoDB Atlas connection and repositories configured |
@@ -156,7 +156,6 @@ The FastAPI application (`src/api/app.py`) exposes interactive Swagger UI docume
 ├── docs/                # Architecture and system documentation resources
 ├── outputs/             # Exported CSVs and Excel workbooks
 │   └── excel/           # AIIP_Output.xlsx final multi-sheet workbook
-├── scratch/             # Diagnostic scripts
 ├── src/
 │   ├── api/             # FastAPI application and endpoint routes (app.py)
 │   ├── config/          # Source registry definitions (sources.yaml) & settings
