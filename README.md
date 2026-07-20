@@ -76,7 +76,7 @@ The pipeline automatically collects information about **AI startups, products, r
 
 ## 🏗️ System Architecture
 
-Detailed architectural documentation is available in [architecture.md](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/architecture.md).
+Detailed architectural documentation is available in [architecture.md](architecture.md) and the full specification in [architecture.pdf](architecture.pdf).
 
 ```mermaid
 graph TD
