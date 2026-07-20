@@ -190,11 +190,56 @@ The pipeline is architected to scale efficiently:
 
 ## 🛠️ Engineering Highlights
 
-During development, the pipeline was enhanced to solve several production challenges:
-- **Multi-Provider Fallback**: Seamless rate limit failovers (Gemini → Groq → OpenRouter) maintaining structured outputs.
-- **Large-Page Chunking**: Splits dense pages (e.g., ZDNet's 17KB payload) into overlapping blocks, merging outputs and removing duplicates.
-- **SPA Waiting Strategy**: Integrates source-specific `networkidle` waits to handle JavaScript-gated React applications.
-- **Data Quality Filtering**: Rejects scraper button artifacts (e.g., "See more jobs") and placeholder categories in job listings.
+### Entity Resolution
+
+Duplicate entity names are normalized to a single canonical form by `src/resolution/resolver.py`:
+
+1. **Corporate suffix cleaning** — `clean_name()` strips trailing punctuation and removes common suffixes (`Inc.`, `Ltd.`, `LLC`, `Corp.`, `GmbH`, etc.) using a regex before comparison.
+2. **Exact match** — The cleaned name is looked up (case-insensitive) against an in-memory registry pre-seeded with 50 prominent AI companies.
+3. **Fuzzy match** — If no exact match is found, RapidFuzz `token_sort_ratio` is run against all registered canonical names. A score ≥ 85.0 triggers a match (e.g., `"HuggingFace"` → `"Hugging Face"`).
+4. **New entity registration** — Names below the threshold are registered as new canonical entities for future de-duplication within the same run.
+
+Every resolution is logged to the `EntityMapping` MongoDB collection with the raw name, canonical name, resolution method (`EXACT` / `FUZZY` / `NEW`), and similarity score.
+
+### Retry & Backoff
+
+All HTTP and Playwright crawls share the same retry policy configured per source in `sources.yaml`:
+
+- **Exponential backoff**: `delay = backoff_seconds × 2^attempt + jitter(0.1–1.0 s)`
+  - Example: `backoff_seconds=5`, attempt 0 → ~5 s, attempt 1 → ~10 s, attempt 2 → ~20 s.
+- **Rate-limiting**: Inter-request delay calculated as `60 / rate_limit_per_minute` seconds, randomised ±50% (±10% for paginated batches) to avoid strict pattern detection.
+- **Configurable**: `max_retries` and `backoff_seconds` are per-source fields in `sources.yaml`. Exhausted retries log the final error and return a failed result without crashing the pipeline.
+
+### Data Quality Safeguards
+
+Multiple layers of data quality enforcement are applied before persistence:
+
+- **Pydantic schema validation**: Every extracted record must satisfy its schema (`StartupEntity`, `JobEntity`, etc.). Required string fields enforce `min_length=1`; numeric fields enforce `ge=0`; missing required fields raise a `ValidationError` and discard the record.
+- **URL format enforcement**: Source URLs and content URLs (e.g., `paper_url`, `NewsContent.url`) must start with `http://` or `https://`. A `sanitize_url()` helper prepends `https://` for bare domain strings; non-HTTP schemes are rejected with a logged error.
+- **Job artifact filter**: Company names matching a known list of UI artifacts (e.g., `"See more jobs ›"`, `"Post a job"`, `"YC Startup"`) are discarded post-validation with a warning log identifying the rejected value.
+- **LLM chunk deduplication**: Entities extracted across overlapping content chunks are deduplicated using category-specific keys (title for news, `paper_url` for papers, `company|role` for jobs) before the merged list is cached.
+- **Delta Engine SKIP**: Records with an unchanged entity fingerprint are not re-written to MongoDB; the operation is logged as `SKIP` and counted in `duplicates_resolved` metrics.
+- **Content normalisation**: Raw HTML is stripped of scripts, styles, and boilerplate by `ContentNormalizer` before being passed to any extractor, reducing noise in both rule-based and LLM extraction paths.
+
+### Token Efficiency
+
+The pipeline avoids unnecessary LLM invocations through two mechanisms:
+
+- **SHA-256 content caching**: A SHA-256 hash of the normalised page content is checked against the `ContentCache` MongoDB collection before invoking the LLM. Cache hits return stored results immediately, skipping the API call entirely.
+- **HTML stripping before LLM**: Page content is normalised and stripped of markup before being sent to the LLM, reducing the token count per request compared to raw HTML.
+- **Context-window chunking**: Pages exceeding 3,500 characters are split into overlapping chunks (3-line overlap) to fit within model token limits, rather than truncating or dropping content.
+
+### Validation Metrics
+
+The pipeline emits a structured metrics summary at the end of every run (via `GET /metrics` or the end-of-run log):
+
+| Metric | Description |
+|:---|:---|
+| `records_crawled` | Total records returned by all extractors before validation |
+| `records_validated` | Records that passed Pydantic schema validation |
+| `records_rejected` | Records discarded by validation (missing fields, bad URLs, job artifacts) |
+| `duplicates_resolved` | Records skipped by the Delta Engine due to unchanged fingerprint |
+| `records_exported` | Final row counts per entity category written to CSV / Excel |
 
 ---
 

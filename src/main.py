@@ -731,6 +731,9 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
                         processor = PipelineProcessor()
                         extracted = await processor.process_content(source_name, source_cfg.category.value, normalized_content)
                         print(f"  LLM Processor -> Extracted {len(extracted)} records")
+
+                    # Count all records returned by the extractor before validation
+                    metrics_collector.increment("records_crawled", len(extracted))
                         
                     # Validate and resolve extracted items
                     source_info = SourceInfo(name=source_cfg.name, url=source_cfg.url)
@@ -741,6 +744,7 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
                         validated = EntityValidator.validate(raw_entity, source_info)
                         if validated:
                             # Enrich with GitHub API metadata if github_url is present
+                            metrics_collector.increment("records_validated")
                             if hasattr(validated.content, "github_url") and validated.content.github_url:
                                 try:
                                     from src.utils.github_api import GitHubAPIClient
@@ -760,7 +764,7 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
                                     print(f"    Failed to enrich GitHub metadata: {gh_err}")
                                     
                             valid_entities.append(validated)
-                            
+
                             # Run name through resolver to standardize
                             if validated.recordType.value in ("STARTUP", "PRODUCT"):
                                 from datetime import datetime, timezone
@@ -807,7 +811,15 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
                             # Process through Knowledge Delta Engine for ALL entities
                             delta_res = await delta_engine.process_entity_update(validated)
                             print(f"      Delta Engine -> Action: {delta_res.action} (Reason: {delta_res.reason})")
+                            # Count records where an unchanged fingerprint caused a skip
+                            if delta_res.action == "SKIP":
+                                metrics_collector.increment("duplicates_resolved")
                                 
+                        else:
+                            # EntityValidator returned None: log rejection reason is
+                            # already emitted by the validator; count here for metrics.
+                            metrics_collector.increment("records_rejected")
+
                     print(f"  Entity Validator -> Validated {len(valid_entities)}/{len(extracted)} entities successfully")
                 
                 raw_size_kb = len(content.encode('utf-8')) / 1024
@@ -853,6 +865,16 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
         print(f"Public Google Sheets URL: {sheets_url}")
     print("Export completed successfully.")
     print("====================================")
+
+    # Capture per-category exported row counts for the metrics summary
+    try:
+        dfs = exporter.generate_dataframes()
+        metrics_collector.set_exported(dfs)
+    except Exception:
+        pass
+
+    metrics_collector.stop_timer()
+    metrics_collector.log_summary()
 
 def main() -> None:
     import argparse
