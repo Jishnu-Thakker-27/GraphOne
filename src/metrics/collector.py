@@ -2,9 +2,14 @@
 Lightweight Pipeline Metrics Tracker.
 
 Collects, updates, and reports run-time operational metrics for the pipeline.
-Validation metrics (records_crawled, records_validated, records_rejected,
-duplicates_resolved) are incremented by main.py after each stage and are
-reported at the end of every pipeline run.
+
+Validation counters (incremented by main.py after each pipeline stage):
+  records_crawled    — raw extraction output, before any validation filter
+  records_validated  — records that passed Pydantic schema + URL + artifact checks
+  records_rejected   — records discarded by EntityValidator
+  duplicates_skipped — Delta Engine SKIP where fingerprint matched (identical content)
+  conflicts_skipped  — Delta Engine SKIP where lower-priority source values were rejected
+  records_exported   — final row counts per entity category after CSV/Excel export
 """
 
 import time
@@ -26,7 +31,10 @@ class PipelineMetricsCollector:
         self.records_crawled: int = 0
         self.records_validated: int = 0
         self.records_rejected: int = 0
-        self.duplicates_resolved: int = 0
+        # Delta Engine SKIP — fingerprint unchanged: identical record already in DB
+        self.duplicates_skipped: int = 0
+        # Delta Engine SKIP — content changed but incoming source priority is lower
+        self.conflicts_skipped: int = 0
         self.delta_updates: int = 0
         self.github_api_calls: int = 0
         self.github_cache_hits: int = 0
@@ -88,7 +96,8 @@ class PipelineMetricsCollector:
             "records_crawled": self.records_crawled,
             "records_validated": self.records_validated,
             "records_rejected": self.records_rejected,
-            "duplicates_resolved": self.duplicates_resolved,
+            "duplicates_skipped": self.duplicates_skipped,
+            "conflicts_skipped": self.conflicts_skipped,
             "delta_updates": self.delta_updates,
             "records_exported": dict(self.records_exported),
             "github_api_calls": self.github_api_calls,
@@ -101,28 +110,34 @@ class PipelineMetricsCollector:
         }
 
     def log_summary(self) -> None:
-        """Logs a formatted summary of all collected metrics."""
+        """Logs a formatted pipeline summary at the end of every ingestion run."""
         m = self.get_metrics()
-        logger.info("========================================")
-        logger.info("       AIIP Ingestion Run Summary       ")
-        logger.info("========================================")
-        logger.info(f"  Records Crawled (Extracted) : {m['records_crawled']}")
-        logger.info(f"  Records Validated           : {m['records_validated']}")
-        logger.info(f"  Records Rejected            : {m['records_rejected']}")
-        logger.info(f"  Duplicates Resolved (SKIP)  : {m['duplicates_resolved']}")
-        logger.info(f"  Delta Updates               : {m['delta_updates']}")
+        W = 32  # column width for aligned output
+        sep = "=" * W
+        logger.info(sep)
+        logger.info("  PIPELINE SUMMARY")
+        logger.info(sep)
+        logger.info(f"  {'Records Crawled':<22}: {m['records_crawled']}")
+        logger.info(f"  {'Records Validated':<22}: {m['records_validated']}")
+        logger.info(f"  {'Records Rejected':<22}: {m['records_rejected']}")
+        logger.info(f"  {'Duplicates Skipped':<22}: {m['duplicates_skipped']}")
+        logger.info(f"  {'Conflicts Skipped':<22}: {m['conflicts_skipped']}")
+        logger.info(f"  {'Delta Updates':<22}: {m['delta_updates']}")
         if m['records_exported']:
-            logger.info(f"  Records Exported:")
+            logger.info("")
+            logger.info("  Export Summary")
+            logger.info("  " + "-" * (W - 2))
             for category, count in m['records_exported'].items():
-                logger.info(f"    {category:<22}: {count}")
-        logger.info(f"  GitHub API Calls            : {m['github_api_calls']}")
-        logger.info(f"  GitHub Cache Hits           : {m['github_cache_hits']}")
-        logger.info(f"  GitHub Cache Misses         : {m['github_cache_misses']}")
-        logger.info(f"  LLM Calls                   : {m['llm_calls']}")
-        logger.info(f"  LLM Cache Hits              : {m['llm_cache_hits']}")
-        logger.info(f"  LLM Cache Misses            : {m['llm_cache_misses']}")
-        logger.info(f"  Processing Time             : {m['processing_time']:.2f} seconds")
-        logger.info("========================================")
+                logger.info(f"  {category:<22}: {count}")
+        logger.info("")
+        logger.info(f"  {'GitHub API Calls':<22}: {m['github_api_calls']}")
+        logger.info(f"  {'GitHub Cache Hits':<22}: {m['github_cache_hits']}")
+        logger.info(f"  {'LLM Calls':<22}: {m['llm_calls']}")
+        logger.info(f"  {'LLM Cache Hits':<22}: {m['llm_cache_hits']}")
+        logger.info(f"  {'Processing Time':<22}: {m['processing_time']:.2f}s")
+        logger.info("")
+        logger.info(f"  {'Pipeline Status':<22}: SUCCESS")
+        logger.info(sep)
 
     def reset(self) -> None:
         """Resets all metrics to zero."""

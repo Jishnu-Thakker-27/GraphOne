@@ -813,7 +813,12 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
                             print(f"      Delta Engine -> Action: {delta_res.action} (Reason: {delta_res.reason})")
                             # Count records where an unchanged fingerprint caused a skip
                             if delta_res.action == "SKIP":
-                                metrics_collector.increment("duplicates_resolved")
+                                if not delta_res.fingerprint_changed:
+                                    # True duplicate: identical content already in DB
+                                    metrics_collector.increment("duplicates_skipped")
+                                else:
+                                    # Content differed but incoming source lost priority conflict
+                                    metrics_collector.increment("conflicts_skipped")
                                 
                         else:
                             # EntityValidator returned None: log rejection reason is
