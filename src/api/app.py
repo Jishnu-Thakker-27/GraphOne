@@ -47,13 +47,17 @@ def clean_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
 @app.get("/", tags=["Operational"], summary="API Root", description="Welcomes users and returns interactive API endpoints directory.")
 def read_root():
     """Root endpoint welcoming users and directing them to OpenAPI documentation."""
-    return {
+    response = {
         "message": "Welcome to the Adaptive Intelligence Ingestion Pipeline (AIIP) API!",
         "docs_url": "/docs",
         "health_url": "/health",
         "metrics_url": "/metrics",
         "status": "online"
     }
+    sheets_url = settings.GOOGLE_SHEETS_URL or (f"https://docs.google.com/spreadsheets/d/{settings.GOOGLE_SHEET_ID}/edit" if settings.GOOGLE_SHEET_ID else None)
+    if sheets_url:
+        response["live_dataset_google_sheets"] = sheets_url
+    return response
 
 
 @app.get("/health", tags=["Operational"], summary="Service Health Check", description="Returns the operational health status and current timestamp.")

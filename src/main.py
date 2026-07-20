@@ -848,7 +848,9 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
     print("====================================")
     exporter = DataExporter()
     exporter.export_to_local()
-    exporter.export_to_google_sheets()
+    sheets_url = exporter.export_to_google_sheets()
+    if sheets_url:
+        print(f"Public Google Sheets URL: {sheets_url}")
     print("Export completed successfully.")
     print("====================================")
 

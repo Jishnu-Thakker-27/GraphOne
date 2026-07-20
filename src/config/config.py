@@ -40,8 +40,10 @@ class Settings:
         self.REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "30"))
 
         # Sheets Integration
-        self.GOOGLE_SHEETS_CREDENTIALS_PATH: str | None = os.getenv("GOOGLE_SHEETS_CREDENTIALS_PATH")
+        self.GOOGLE_SHEETS_CREDENTIALS_PATH: str | None = os.getenv("GOOGLE_SHEETS_CREDENTIALS_PATH", "google_sheets_credentials.json" if os.path.exists("google_sheets_credentials.json") else None)
+        self.GOOGLE_SHEETS_CREDENTIALS_JSON: str | None = os.getenv("GOOGLE_SHEETS_CREDENTIALS_JSON")
         self.GOOGLE_SHEET_ID: str | None = os.getenv("GOOGLE_SHEET_ID")
+        self.GOOGLE_SHEETS_URL: str | None = os.getenv("GOOGLE_SHEETS_URL")
 
     def validate(self) -> list[str]:
         """

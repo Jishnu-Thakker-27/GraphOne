@@ -212,54 +212,75 @@ class DataExporter:
         except Exception as e:
             logger.error(f"Failed to write Excel workbook: {e}")
 
-    def export_to_google_sheets(self) -> None:
-        """Syncs MongoDB database content to the configured Google Sheet via gspread."""
+    def export_to_google_sheets(self) -> str | None:
+        """
+        Syncs MongoDB database content (via the generated DataFrames) to Google Sheets via gspread.
+        Returns the public Google Sheets URL if successful, or None if credentials are missing.
+        """
+        import json
+
         creds_path = settings.GOOGLE_SHEETS_CREDENTIALS_PATH
+        creds_json = settings.GOOGLE_SHEETS_CREDENTIALS_JSON
         sheet_id = settings.GOOGLE_SHEET_ID
 
-        if not creds_path or not sheet_id:
-            logger.warning("Google Sheets credentials path or Sheet ID not configured. Skipping Google Sheets sync.")
-            return
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
 
-        if not os.path.exists(creds_path):
-            logger.warning(f"Google Sheets credentials file not found at path: {creds_path}. Skipping Google Sheets sync.")
-            return
+        creds = None
+        if creds_json:
+            try:
+                info = json.loads(creds_json)
+                creds = Credentials.from_service_account_info(info, scopes=scopes)
+            except Exception as e:
+                logger.error(f"Failed to parse GOOGLE_SHEETS_CREDENTIALS_JSON: {e}")
+        elif creds_path and os.path.exists(creds_path):
+            try:
+                creds = Credentials.from_service_account_file(creds_path, scopes=scopes)
+            except Exception as e:
+                logger.error(f"Failed to load credentials from file {creds_path}: {e}")
 
-        logger.info(f"Syncing data to Google Sheet ID: {sheet_id}")
+        if not creds:
+            logger.warning("Google Sheets credentials not configured or valid. Skipping Google Sheets sync.")
+            return None
+
         try:
-            scopes = [
-                "https://www.googleapis.com/auth/spreadsheets",
-                "https://www.googleapis.com/auth/drive"
-            ]
-            creds = Credentials.from_service_account_file(creds_path, scopes=scopes)
             client = gspread.authorize(creds)
-            spreadsheet = client.open_by_key(sheet_id)
+            if sheet_id:
+                spreadsheet = client.open_by_key(sheet_id)
+            else:
+                title = "Adaptive Intelligence Ingestion Pipeline (AIIP) Dataset"
+                try:
+                    spreadsheet = client.open(title)
+                except gspread.SpreadsheetNotFound:
+                    spreadsheet = client.create(title)
+                    try:
+                        spreadsheet.share('', perm_type='anyone', role='reader')
+                    except Exception as share_err:
+                        logger.warning(f"Could not make spreadsheet public: {share_err}")
+
+            sheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet.id}/edit"
+            logger.info(f"Syncing data to Google Sheet: {spreadsheet.title} (ID: {spreadsheet.id})")
 
             dfs = self.generate_dataframes()
 
             for tab_name, df in dfs.items():
                 try:
-                    # Clean and format DataFrame values
                     df_to_sync = df.copy()
-                    
-                    # Convert datetimes to strings for Google Sheets
                     for col in df_to_sync.columns:
                         if pd.api.types.is_datetime64_any_dtype(df_to_sync[col]):
                             df_to_sync[col] = df_to_sync[col].dt.strftime('%Y-%m-%d %H:%M:%S')
                     
                     df_to_sync = df_to_sync.fillna("")
                     
-                    # Get or create worksheet
                     try:
                         worksheet = spreadsheet.worksheet(tab_name)
                     except gspread.WorksheetNotFound:
                         worksheet = spreadsheet.add_worksheet(title=tab_name, rows="100", cols="20")
                         logger.info(f"Created new worksheet: '{tab_name}'")
 
-                    # Clear worksheet first
                     worksheet.clear()
-
-                    # Write header and values
                     headers = df_to_sync.columns.tolist()
                     values = df_to_sync.values.tolist()
                     worksheet.update("A1", [headers] + values)
@@ -267,6 +288,17 @@ class DataExporter:
                 except Exception as ex:
                     logger.error(f"Failed to synchronize tab '{tab_name}': {ex}")
 
-            logger.info("Google Sheets synchronization completed successfully.")
+            print("\n==================================================")
+            print("Google Sheets Sync Completed Successfully!")
+            print(f"Spreadsheet Title: {spreadsheet.title}")
+            print(f"Spreadsheet ID   : {spreadsheet.id}")
+            print(f"Google Sheets URL: {sheet_url}")
+            print("==================================================\n")
+
+            logger.info(f"Google Sheets synchronization completed successfully: {sheet_url}")
+            return sheet_url
+
         except Exception as e:
             logger.error(f"Failed to authorize or open Google Sheet: {e}")
+            return None
+
