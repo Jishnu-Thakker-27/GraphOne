@@ -138,6 +138,8 @@ class DataExporter:
             flat.append({
                 "Raw Name": d.get("rawName"),
                 "Canonical Name": d.get("canonicalName"),
+                "Similarity Score": d.get("similarityScore", 100.0),
+                "Resolution Method": d.get("resolutionMethod", "EXACT"),
                 "Timestamp": d.get("timestamp"),
             })
         return flat
@@ -195,8 +197,8 @@ class DataExporter:
                     df_to_save.to_excel(writer, sheet_name=name, index=False)
             logger.info(f"Exported Excel Workbook: {excel_path}")
             
-            # Write to assignment-preferred path (only the 5 main sheets)
-            main_sheets = ["Startups", "Products", "Research Papers", "Jobs", "News"]
+            # Write to assignment-preferred path (all 6 sheets)
+            main_sheets = ["Startups", "Products", "Research Papers", "Jobs", "News", "Entity Mapping Log"]
             with pd.ExcelWriter(excel_preferred_path, engine="openpyxl") as writer:
                 for name in main_sheets:
                     df = dfs.get(name, pd.DataFrame())

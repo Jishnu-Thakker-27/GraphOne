@@ -38,6 +38,7 @@ from src.database.repositories import (
     ProductRepository,
     ResearchPaperRepository,
     ChangeHistoryRepository,
+    EntityMappingRepository,
 )
 
 def run_schema_verification_test() -> None:
@@ -611,6 +612,11 @@ def run_exporter_verification_test() -> None:
     if os.path.exists(test_dir):
         shutil.rmtree(test_dir)
         
+    # Clean up mock records from database so they do not contaminate the real output
+    startup_repo.delete_many({"content.entityName": "Exporter Inc"})
+    product_repo.delete_many({"content.startupName": "Exporter Inc"})
+    paper_repo.delete_many({"content.title": "Exporter Research"})
+    
     print("====================================")
 
 async def run_pipeline_tests(run_all: bool = False) -> None:
@@ -730,20 +736,54 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
                     source_info = SourceInfo(name=source_cfg.name, url=source_cfg.url)
                     valid_entities = []
                     delta_engine = KnowledgeDeltaEngine()
+                    mapping_repo = EntityMappingRepository()
                     for raw_entity in extracted:
                         validated = EntityValidator.validate(raw_entity, source_info)
                         if validated:
                             valid_entities.append(validated)
                             
                             # Run name through resolver to standardize
-                            if validated.recordType.value == "STARTUP":
-                                resolved_name, matched = resolver.resolve(validated.content.entityName)
-                                validated.content.entityName = resolved_name
+                            if validated.recordType.value in ("STARTUP", "PRODUCT"):
+                                from datetime import datetime, timezone
+                                from rapidfuzz import fuzz
+                                
+                                is_startup = validated.recordType.value == "STARTUP"
+                                raw_name = validated.content.entityName if is_startup else validated.content.startupName
+                                resolved_name, matched = resolver.resolve(raw_name)
+                                
+                                if is_startup:
+                                    validated.content.entityName = resolved_name
+                                else:
+                                    validated.content.startupName = resolved_name
                                 print(f"    Resolved entity name: '{resolved_name}' (Matched pre-seeded: {matched})")
-                            elif validated.recordType.value == "PRODUCT":
-                                resolved_name, matched = resolver.resolve(validated.content.startupName)
-                                validated.content.startupName = resolved_name
-                                print(f"    Resolved entity name: '{resolved_name}' (Matched pre-seeded: {matched})")
+                                
+                                # Log mapping record
+                                try:
+                                    if matched:
+                                        if raw_name.lower() == resolved_name.lower():
+                                            method = "EXACT"
+                                            score = 100.0
+                                        else:
+                                            method = "FUZZY"
+                                            score = float(fuzz.token_sort_ratio(resolver.clean_name(raw_name), resolver.clean_name(resolved_name)))
+                                    else:
+                                        method = "NEW"
+                                        score = 100.0
+                                    
+                                    # Use replace_one with upsert to prevent unique key error on rawName
+                                    mapping_repo.collection.replace_one(
+                                        {"rawName": raw_name},
+                                        {
+                                            "rawName": raw_name,
+                                            "canonicalName": resolved_name,
+                                            "similarityScore": score,
+                                            "resolutionMethod": method,
+                                            "timestamp": datetime.now(timezone.utc)
+                                        },
+                                        upsert=True
+                                    )
+                                except Exception as e:
+                                    pass
                                 
                             # Process through Knowledge Delta Engine for ALL entities
                             delta_res = await delta_engine.process_entity_update(validated)
