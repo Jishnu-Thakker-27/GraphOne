@@ -54,13 +54,31 @@ def read_root():
         "message": "Welcome to the Adaptive Intelligence Ingestion Pipeline (AIIP) API!",
         "docs_url": "/docs",
         "health_url": "/health",
-        "metrics_url": "/metrics",
-        "download_excel": "/download/excel",
-        "status": "online"
+        "metrics_url": "/metrics"
     }
-    sheets_url = settings.GOOGLE_SHEETS_URL or (f"https://docs.google.com/spreadsheets/d/{settings.GOOGLE_SHEET_ID}/edit" if settings.GOOGLE_SHEET_ID else None)
-    if sheets_url:
-        response["google_sheets"] = sheets_url
+    if settings.GOOGLE_SHEETS_URL:
+        response["google_sheets_url"] = settings.GOOGLE_SHEETS_URL
+    if settings.GOOGLE_SHEET_ID:
+        response["google_sheet_id"] = settings.GOOGLE_SHEET_ID
+    return response
+
+
+@app.get(
+    "/dataset",
+    tags=["Datasets"],
+    summary="Dataset Directory & Links",
+    description="Returns links to the downloadable Excel dataset and Google Sheets dataset."
+)
+def get_dataset():
+    """Returns dataset download links and public Google Sheets URL."""
+    response = {
+        "excel_dataset": "/download/excel",
+        "documentation": "/docs"
+    }
+    if settings.GOOGLE_SHEETS_URL:
+        response["google_sheets_url"] = settings.GOOGLE_SHEETS_URL
+    if settings.GOOGLE_SHEET_ID:
+        response["google_sheet_id"] = settings.GOOGLE_SHEET_ID
     return response
 
 
