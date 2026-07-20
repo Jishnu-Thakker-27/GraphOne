@@ -51,12 +51,14 @@ class BaseRepository:
         result = self.collection.update_one(query, update, upsert=upsert)
         return result.modified_count
 
-    def find(self, query: Dict[str, Any] = None, sort_by: List[tuple] = None, limit: int = 0) -> List[Dict[str, Any]]:
+    def find(self, query: Dict[str, Any] = None, sort_by: List[tuple] = None, limit: int = 0, skip: int = 0) -> List[Dict[str, Any]]:
         """Finds list of documents matching the query."""
         query = query or {}
         cursor = self.collection.find(query)
         if sort_by:
             cursor = cursor.sort(sort_by)
+        if skip > 0:
+            cursor = cursor.skip(skip)
         if limit > 0:
             cursor = cursor.limit(limit)
         return list(cursor)
