@@ -58,7 +58,7 @@ class DataExporter:
             content = d.get("content", {})
             source = d.get("source", {})
             flat.append({
-                "Startup Name": content.get("startupName"),
+                "Developer / Organization": content.get("startupName"),
                 "Pricing Model": content.get("pricingModel"),
                 "Source Name": source.get("name"),
                 "Source URL": source.get("url"),

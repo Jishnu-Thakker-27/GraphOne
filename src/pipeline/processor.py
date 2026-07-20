@@ -249,7 +249,7 @@ class PipelineProcessor:
                 "  \"entities\": [\n"
                 "    {\n"
                 "      \"title\": \"Headline\" (string, required),\n"
-                "      \"summary\": \"Brief article summary\" (string or null, optional),\n"
+                "      \"summary\": \"A concise, 1-2 sentence summary of the article's core content\" (string, required),\n"
                 "      \"published_date\": \"YYYY-MM-DDTHH:MM:SSZ\" (string in ISO 8601 format, or null if not shown),\n"
                 "      \"url\": \"https://example.com/news/...\" (string, required)\n"
                 "    }\n"

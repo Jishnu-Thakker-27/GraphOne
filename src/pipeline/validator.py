@@ -55,7 +55,25 @@ class EntityValidator:
             elif record_type_str == EntityRecordType.RESEARCH_PAPER.value:
                 return ResearchPaperEntity(**payload)
             elif record_type_str == EntityRecordType.JOB.value:
-                return JobEntity(**payload)
+                entity = JobEntity(**payload)
+                company = entity.content.company.strip()
+                company_lower = company.lower()
+                
+                # Check for scraper button texts, page categories, or generic placeholders
+                blacklist = [
+                    "see more jobs ›", "see more jobs", "startup", "yc startup", "ai startups", 
+                    "established companies", "ai_jobs", "post a job", "all jobs", "find a job", 
+                    "jobs", "company", "placeholder", "startup job", "yc companies", "other"
+                ]
+                
+                if (company_lower in blacklist or 
+                    "›" in company or 
+                    len(company) <= 1 or 
+                    company_lower.startswith("select ") or 
+                    company_lower.endswith(" jobs")):
+                    logger.warning(f"Validation discarded JobEntity: company '{company}' is a placeholder/artifact.")
+                    return None
+                return entity
             elif record_type_str == EntityRecordType.NEWS.value:
                 return NewsEntity(**payload)
             else:

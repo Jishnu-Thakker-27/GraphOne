@@ -598,7 +598,7 @@ def run_exporter_verification_test() -> None:
     else:
         print("Test 2: Startup Data Flattening Verification -> FAILED")
         
-    if len(dfs["Products"]) == 1 and dfs["Products"].iloc[0]["Startup Name"] == "Exporter Inc":
+    if len(dfs["Products"]) == 1 and dfs["Products"].iloc[0]["Developer / Organization"] == "Exporter Inc":
         print("Test 3: Product Data Flattening Verification -> PASSED")
     else:
         print("Test 3: Product Data Flattening Verification -> FAILED")
@@ -740,6 +740,25 @@ async def run_pipeline_tests(run_all: bool = False) -> None:
                     for raw_entity in extracted:
                         validated = EntityValidator.validate(raw_entity, source_info)
                         if validated:
+                            # Enrich with GitHub API metadata if github_url is present
+                            if hasattr(validated.content, "github_url") and validated.content.github_url:
+                                try:
+                                    from src.utils.github_api import GitHubAPIClient
+                                    gh_client = GitHubAPIClient()
+                                    parsed = gh_client.parse_github_url(validated.content.github_url)
+                                    if parsed:
+                                        owner, repo_name = parsed
+                                        meta = await gh_client.fetch_repo_metadata(owner, repo_name)
+                                        if meta:
+                                            validated.content.github_stars = meta.get("stars")
+                                            validated.content.github_forks = meta.get("forks")
+                                            validated.content.github_language = meta.get("language")
+                                            validated.content.github_description = meta.get("description")
+                                            validated.content.github_updated_at = meta.get("updated_at")
+                                            print(f"    Enriched GitHub metadata for {owner}/{repo_name} (Stars: {meta.get('stars')})")
+                                except Exception as gh_err:
+                                    print(f"    Failed to enrich GitHub metadata: {gh_err}")
+                                    
                             valid_entities.append(validated)
                             
                             # Run name through resolver to standardize
