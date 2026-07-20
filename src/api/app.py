@@ -4,10 +4,13 @@ FastAPI application for AIIP.
 Exposes operational telemetry metrics, audit logs, and read-only dataset endpoints.
 """
 
+import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from src.config.config import settings
 from src.metrics.collector import metrics_collector
 from src.database.repositories import (
     StartupRepository,
@@ -21,7 +24,7 @@ from src.database.repositories import (
 
 app = FastAPI(
     title="Adaptive Intelligence Ingestion Pipeline (AIIP) API",
-    description="Programmatically exposes pipeline operational metrics, audit change history, and read-only dataset collections.",
+    description="Programmatically exposes pipeline operational metrics, audit change history, read-only dataset collections, and direct Excel workbook downloads.",
     version="1.0"
 )
 
@@ -52,12 +55,38 @@ def read_root():
         "docs_url": "/docs",
         "health_url": "/health",
         "metrics_url": "/metrics",
+        "download_excel": "/download/excel",
         "status": "online"
     }
     sheets_url = settings.GOOGLE_SHEETS_URL or (f"https://docs.google.com/spreadsheets/d/{settings.GOOGLE_SHEET_ID}/edit" if settings.GOOGLE_SHEET_ID else None)
     if sheets_url:
-        response["live_dataset_google_sheets"] = sheets_url
+        response["google_sheets"] = sheets_url
     return response
+
+
+@app.get(
+    "/download/excel",
+    tags=["Datasets"],
+    summary="Download Excel Workbook",
+    description="Returns the generated multi-sheet AIIP_Output.xlsx Excel workbook containing all 6 datasets."
+)
+def download_excel():
+    """Serves the generated Excel workbook AIIP_Output.xlsx as a file download."""
+    excel_path = os.path.join("outputs", "excel", "AIIP_Output.xlsx")
+    if not os.path.exists(excel_path):
+        excel_path = os.path.join("outputs", "extracted_data.xlsx")
+    
+    if not os.path.exists(excel_path):
+        raise HTTPException(
+            status_code=404,
+            detail="Excel workbook not found. Please run the ingestion pipeline to generate outputs."
+        )
+    
+    return FileResponse(
+        path=excel_path,
+        filename="AIIP_Output.xlsx",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 
 @app.get("/health", tags=["Operational"], summary="Service Health Check", description="Returns the operational health status and current timestamp.")
