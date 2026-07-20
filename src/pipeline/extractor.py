@@ -202,6 +202,31 @@ class HybridExtractionEngine:
                 logger.info(f"Rule-based Extractor completed | Source: {source_name} | Extracted {len(entities)} products")
             except Exception as e:
                 logger.error(f"GitHub Trending rule-based parsing failed: {e}")
+        elif source_name == "remoteok_ai":
+            try:
+                soup = BeautifulSoup(content, "html.parser")
+                tr_list = soup.find_all("tr")
+                for tr in tr_list:
+                    company = tr.get("data-company")
+                    h2 = tr.find("h2")
+                    if company and h2:
+                        role_str = h2.get_text().strip()
+                        url_el = tr.find("a", class_="preventLink")
+                        href = url_el["href"] if url_el and "href" in url_el.attrs else ""
+                        job_url = f"https://remoteok.com{href}" if href.startswith("/") else (href or "https://remoteok.com/remote-ai-jobs")
+                        entities.append({
+                            "recordType": "JOB",
+                            "content": {
+                                "company": company.strip(),
+                                "role_family": role_str,
+                                "is_remote": True,
+                                "published_date": None,
+                                "url": job_url
+                            }
+                        })
+                logger.info(f"Rule-based Extractor completed | Source: {source_name} | Extracted {len(entities)} jobs")
+            except Exception as e:
+                logger.error(f"RemoteOK rule-based parsing failed: {e}")
         return entities
 
     @classmethod

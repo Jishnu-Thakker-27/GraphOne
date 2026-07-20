@@ -302,9 +302,11 @@ sources:
     url: "https://remoteok.com/remote-ai-jobs"
     priority: "HIGH"
     precedence: 70
-    extraction_method: "LLM"
+    extraction_method: "RULE_BASED"
     crawl_frequency_hours: 24
     rate_limit_per_minute: 10
     retry_policy:
       max_retries: 2
       backoff_seconds: 15
+    playwright_wait: "networkidle"
+    playwright_timeout_seconds: 45
