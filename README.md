@@ -16,12 +16,13 @@
 - [📖 Overview](#-overview)
 - [🏗️ System Architecture](#️-system-architecture)
 - [🧠 Hybrid Extraction Engine](#-hybrid-extraction-engine)
-- [📡 Source Coverage](#-source-coverage)
-- [⚡ Scalability](#-scalability)
+- [📡 API Endpoints & Swagger](#-api-endpoints--swagger)
+- [📁 Folder Structure](#-folder-structure)
+- [⚡ Scalability & Performance](#-scalability--performance)
 - [🛠️ Engineering Highlights](#️-engineering-highlights)
 - [⚙️ Getting Started](#️-getting-started)
 - [🌐 Live Deployment](#-live-deployment)
-- [📸 Screenshots](#-screenshots)
+- [⚠️ Known Limitations & Future Work](#️-known-limitations--future-work)
 - [📄 License](#-license)
 
 ---
@@ -32,14 +33,12 @@ The pipeline successfully executed a full end-to-end extraction run yielding the
 
 | Dataset | Records | Target | Status |
 |:---|---:|:---:|:---:|
-| **Startups** | **5,755** | — | ✅ Complete |
-| **Products** | **1,086** | 1,000+ | ✅ Complete |
-| **Research Papers** | **1,097** | 1,000+ | ✅ Complete |
-| **News** | **149** | 50+ | ✅ Met |
-| **Jobs** | **58** | 50+ | ✅ Met |
-
-* **Total Records Ingested**: 8,145 records
-* **Crawler Concurrency**: 10 workers
+| **Startups** | **5,753** | — | ✅ Complete |
+| **Products** | **1,080** | 1,000+ | ✅ Complete |
+| **Research Papers** | **1,100** | 1,000+ | ✅ Complete |
+| **News** | **165** | 50+ | ✅ Met |
+| **Jobs** | **48** | 50+ | ✅ Met |
+| **Entity Mappings** | **7,085** | — | ✅ Logged |
 
 ---
 
@@ -48,15 +47,17 @@ The pipeline successfully executed a full end-to-end extraction run yielding the
 | Requirement | Status | Description |
 |:---|:---:|:---|
 | **1000+ Startups** | ✅ | 5,755 startups ingested from YC Companies API |
-| **1000+ Products** | ✅ | 1,086 products ingested from GitHub API and Trending |
-| **1000+ Research Papers** | ✅ | 1,097 papers ingested from arXiv query queries |
-| **AI News Monitoring** | ✅ | 149 articles ingested from TechCrunch, ZDNet, Wired, VB, HF, and Google |
-| **AI Job Monitoring** | ✅ | 58 jobs ingested from YC Jobs, WWR, and AIJobsBoard |
+| **1000+ Products** | ✅ | 1,080 products/repos ingested from GitHub API and Trending |
+| **1000+ Research Papers** | ✅ | 1,100 papers ingested from arXiv queries |
+| **AI News Monitoring** | ✅ | 165 articles ingested from TechCrunch, ZDNet, Wired, VB, HF, and Google |
+| **AI Job Monitoring** | ✅ | 48 jobs ingested from YC Jobs, WWR, and AIJobsBoard |
 | **Entity Resolution** | ✅ | RapidFuzz fuzzy name normalization with pre-seeded startups |
 | **Knowledge Delta Engine**| ✅ | Deterministic merges, priority precedence, and ChangeHistory logs |
-| **MongoDB Storage** | ✅ | Indexes and repository patterns fully configured |
-| **CSV Export** | ✅ | 5 flattened CSVs exported to outputs directory |
+| **MongoDB Storage** | ✅ | MongoDB Atlas connection and repositories configured |
+| **CSV Export** | ✅ | 6 flattened CSVs exported to `outputs/` directory |
+| **Excel Export** | ✅ | Multi-sheet workbook exported to `outputs/excel/AIIP_Output.xlsx` |
 | **Google Sheets Export** | ✅ | Synchronization support implemented (requires credentials for live sync) |
+| **REST API Endpoints** | ✅ | Read-only FastAPI dataset endpoints exposed on `/docs` |
 | **Deployment** | 🚧 Pending | Final staging deployment in progress |
 
 ---
@@ -67,11 +68,13 @@ The **Adaptive Intelligence Ingestion Pipeline (AIIP)** is a scalable data inges
 
 Unlike traditional scrapers, AIIP detects incremental knowledge changes using a **Knowledge Delta Engine**, updating only modified entities while maintaining historical change records.
 
-The pipeline automatically collects information about **AI startups, products, research papers, jobs, and news**, processes it using a hybrid extraction strategy, resolves duplicate entities, tracks changes over time, and exports the final dataset to **MongoDB** and **Google Sheets**.
+The pipeline automatically collects information about **AI startups, products, research papers, jobs, and news**, processes it using a hybrid extraction strategy, resolves duplicate entities, tracks changes over time, and exposes the final dataset via **REST API**, **MongoDB**, **CSV**, **Excel**, and **Google Sheets**.
 
 ---
 
 ## 🏗️ System Architecture
+
+Detailed architectural documentation is available in [architecture.md](file:///c:/Users/jishn/OneDrive/Desktop/Jishnu/AI%20Signal/architecture.md).
 
 ```mermaid
 graph TD
@@ -85,11 +88,14 @@ graph TD
     Rule --> Validation[Schema Validation]
     JSONLD --> Validation
     LLM --> Validation
-    Validation --> Resolution[Entity Resolution]
+    Validation --> GitHub[GitHub API Enricher]
+    GitHub --> Resolution[Entity Resolution]
     Resolution --> Delta[Knowledge Delta Engine]
     Delta --> MongoDB[(MongoDB)]
     MongoDB --> CSV[CSV Exporters]
+    MongoDB --> Excel[Excel Exporter]
     MongoDB --> GoogleSheets[Google Sheets Sync]
+    MongoDB --> FastAPI[FastAPI REST API]
 ```
 
 ---
@@ -120,50 +126,60 @@ Rule Extraction?
 LLM Extraction ──► Multi-LLM Fallback ──► Done
 ```
 
-### Multi-LLM Fallback Chain
-If the preferred model is rate-limited or fails, the orchestrator automatically cascades to alternative providers:
+---
+
+## 📡 API Endpoints & Swagger
+
+The FastAPI application (`src/api/app.py`) exposes interactive Swagger UI documentation at `/docs` with MongoDB-level query pagination (`limit`, `skip`) and case-insensitive regex field filtering:
+
+### Operational Endpoints
+- `GET /` — Service directory map
+- `GET /health` — Service health check
+- `GET /metrics` — Operational telemetry metrics
+
+### Dataset Endpoints
+- `GET /startups` — Paginated AI startups (`limit`, `skip`, `name`)
+- `GET /products` — Paginated AI products (`limit`, `skip`, `startup`)
+- `GET /research-papers` — Paginated research papers (`limit`, `skip`, `title`)
+- `GET /jobs` — Paginated AI job postings (`limit`, `skip`, `company`)
+- `GET /news` — Paginated AI news signals (`limit`, `skip`, `title`)
+- `GET /entity-mappings` — Fuzzy entity resolution logs (`limit`, `skip`, `raw_name`)
+- `GET /changes` — Audit change history logs (`limit`, `operation`, `entity_id`)
+
+---
+
+## 📁 Folder Structure
+
 ```text
-Gemini-2.0-Flash (Tier 1)
-           ↓
-  Groq / Llama-3.1 (Tier 2)
-           ↓
-OpenRouter / Free (Tier 3)
-           ↓
-DeepSeek-Chat (Tier 4) [Optional]
-           ↓
-GPT-4o-Mini (Tier 5)   [Optional]
+├── src/
+│   ├── api/             # FastAPI application and endpoint routes (app.py)
+│   ├── config/          # Source registry definitions (sources.yaml) & settings
+│   ├── crawler/         # Async Playwright & HTTP crawlers + normalizer
+│   ├── database/        # MongoDB repositories and models
+│   ├── delta/           # Knowledge Delta Engine for incremental updates
+│   ├── exporters/       # CSV, Excel, and Google Sheets exporters
+│   ├── llm/             # Multi-tier LLM clients (Gemini, Groq, OpenRouter)
+│   ├── metrics/         # Run-time operational metrics collector
+│   ├── pipeline/        # Validators, chunking processor, strategy selectors
+│   ├── resolution/      # RapidFuzz entity resolver
+│   ├── utils/           # GitHub REST API client & helpers
+│   └── main.py          # CLI entrypoint for testing and full runs
+├── outputs/             # Exported CSVs, Excel workbooks (outputs/excel/AIIP_Output.xlsx)
+├── Procfile             # Render web service start command
+├── render.yaml          # Render Blueprint infrastructure spec
+├── runtime.txt          # Python runtime version
+└── requirements.txt     # Python dependencies
 ```
 
 ---
 
-## 📡 Source Coverage
+## ⚡ Scalability & Performance
 
-### Supported News Sources
-- **TechCrunch AI** (LLM extraction)
-- **ZDNet AI** (LLM extraction + chunking)
-- **Wired AI** (LLM extraction)
-- **VentureBeat AI** (LLM extraction)
-- **MIT Technology Review** (LLM extraction + dynamic wait)
-- **Google AI Blog** (LLM extraction)
-- **Hugging Face Blog** (LLM extraction)
-
-### Supported Job Sources
-- **YC Jobs** (LLM extraction + dynamic wait)
-- **AIJobsBoard** (LLM extraction)
-- **We Work Remotely** (LLM extraction)
-- **AI Jobs** (LLM extraction)
-- **RemoteOK** (JSON-LD metadata extraction)
-
----
-
-## ⚡ Scalability
-
-The pipeline is architected to scale to **500,000+ entities** without database code modifications:
+The pipeline is architected to scale efficiently:
 - **Asynchronous Crawling**: High-performance HTTP fetching using aiohttp with custom worker semaphore limits.
-- **Stateless Extraction**: Processing workers run independently of database writes, enabling clean scale-out.
-- **MongoDB Indexing**: Compound indexing on lookup fields (`content.startupName` + `source.url` unique index, etc.) prevents write bottlenecks.
+- **MongoDB-Level Pagination**: Offset pagination (`limit`, `skip`) executed directly on database cursors.
 - **Content Hashing**: SHA-256 caching checks content integrity before LLM invocation, skipping 95%+ of repetitive API costs.
-- **Modular Registries**: Config-driven pipeline limits memory footprints during massive dataset scans.
+- **GitHub API Enrichment**: Automated repository metadata enrichment (stars, forks, language, description) with persistent DB caching.
 
 ---
 
@@ -172,9 +188,8 @@ The pipeline is architected to scale to **500,000+ entities** without database c
 During development, the pipeline was enhanced to solve several production challenges:
 - **Multi-Provider Fallback**: Seamless rate limit failovers maintaining structured outputs.
 - **Large-Page Chunking**: Splits dense pages (e.g., ZDNet's 17KB payload) into overlapping blocks, merging outputs and removing duplicates.
-- **SPA Waiting Strategy**: Integrates source-specific `networkidle` waits to handle JavaScript-gated React applications (e.g., MIT Tech Review).
-- **Date Normalizer Graceful Fallback**: Bypasses validation errors on optional timestamps when pages lack dates.
-- **Boilerplate Recovery**: Relaxed CSS boilerplate selectors to avoid stripping article layout containers.
+- **SPA Waiting Strategy**: Integrates source-specific `networkidle` waits to handle JavaScript-gated React applications.
+- **Data Quality Filtering**: Rejects scraper button artifacts (e.g., "See more jobs") and placeholder categories in job listings.
 
 ---
 
@@ -202,9 +217,13 @@ OPENROUTER_API_KEY=your_openrouter_key
 MONGODB_URI=mongodb://localhost:27017/
 ```
 
-### 4. Run the Ingestion Pipeline
+### 4. Run the Pipeline & API Server
 ```bash
+# Run full ingestion pipeline and exports
 python -m src.main --all
+
+# Start local FastAPI web server
+uvicorn src.api.app:app --reload
 ```
 
 ---
@@ -214,13 +233,14 @@ python -m src.main --all
 🚧 Deployment is currently pending.
 
 - **API URL**: TBD
-- **Swagger**: TBD
+- **Swagger Documentation**: TBD
 
 ---
 
-## 📸 Screenshots
+## ⚠️ Known Limitations & Future Work
 
-🚧 Visual walkthroughs and dashboards will be added here upon final deployment verification.
+- **Google Sheets Live Sync**: Implemented locally in `DataExporter`; requires placing service account credentials in `google_sheets_credentials.json` for live cloud sync.
+- **Background Scheduler**: Pipeline currently executes via CLI or cron; can be integrated with Celery / APScheduler for automated hourly runs.
 
 ---
 
