@@ -47,6 +47,23 @@ def clean_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
     return doc
 
 
+def _get_google_sheets_url() -> Optional[str]:
+    """Helper to retrieve configured non-placeholder Google Sheets URL."""
+    url = settings.GOOGLE_SHEETS_URL
+    if not url and settings.GOOGLE_SHEET_ID:
+        url = f"https://docs.google.com/spreadsheets/d/{settings.GOOGLE_SHEET_ID}/edit"
+    if url and "1AbCdEfGhIjKlMnOpQrStUvWxYz" not in url:
+        return url
+    return None
+
+
+def _has_excel_workbook() -> bool:
+    """Helper to check if Excel workbook output exists on disk."""
+    p1 = os.path.join("outputs", "excel", "AIIP_Output.xlsx")
+    p2 = os.path.join("outputs", "extracted_data.xlsx")
+    return os.path.exists(p1) or os.path.exists(p2)
+
+
 @app.get("/", tags=["Operational"], summary="API Root", description="Welcomes users and returns interactive API endpoints directory.")
 def read_root():
     """Root endpoint welcoming users and directing them to OpenAPI documentation."""
@@ -56,10 +73,11 @@ def read_root():
         "health_url": "/health",
         "metrics_url": "/metrics"
     }
-    if settings.GOOGLE_SHEETS_URL:
-        response["google_sheets_url"] = settings.GOOGLE_SHEETS_URL
-    if settings.GOOGLE_SHEET_ID:
-        response["google_sheet_id"] = settings.GOOGLE_SHEET_ID
+    sheets_url = _get_google_sheets_url()
+    if sheets_url:
+        response["google_sheets_url"] = sheets_url
+    if _has_excel_workbook():
+        response["download_excel"] = "/download/excel"
     return response
 
 
@@ -67,18 +85,18 @@ def read_root():
     "/dataset",
     tags=["Datasets"],
     summary="Dataset Directory & Links",
-    description="Returns links to the downloadable Excel dataset and Google Sheets dataset."
+    description="Returns links to the downloadable Excel dataset (if available) and Google Sheets dataset."
 )
 def get_dataset():
     """Returns dataset download links and public Google Sheets URL."""
     response = {
-        "excel_dataset": "/download/excel",
         "documentation": "/docs"
     }
-    if settings.GOOGLE_SHEETS_URL:
-        response["google_sheets_url"] = settings.GOOGLE_SHEETS_URL
-    if settings.GOOGLE_SHEET_ID:
-        response["google_sheet_id"] = settings.GOOGLE_SHEET_ID
+    if _has_excel_workbook():
+        response["excel_dataset"] = "/download/excel"
+    sheets_url = _get_google_sheets_url()
+    if sheets_url:
+        response["google_sheets_url"] = sheets_url
     return response
 
 
